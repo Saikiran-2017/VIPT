@@ -7,6 +7,12 @@ export const config = {
     nodeEnv: process.env.NODE_ENV || 'development',
     corsOrigin: process.env.CORS_ORIGIN || '*',
   },
+  /** Internal REST API key for `/api/v1/*`. Affiliate keys live under `apiKeys`. */
+  auth: {
+    apiKey: process.env.API_KEY?.trim() || '',
+    skipAuth:
+      process.env.SKIP_AUTH === '1' || process.env.SKIP_AUTH === 'true',
+  },
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5433', 10),

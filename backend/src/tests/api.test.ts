@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { createExpressApp } from '../server';
+import { authed } from './authTestHelpers';
 import { query } from '../models/database';
 import { cacheGet } from '../models/cache';
 
@@ -36,6 +37,7 @@ describe('API Integration Tests (Express; same handlers as Fastify production)',
       const res = await request(app).get('/health').expect(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.status).toBe('healthy');
+      expect(res.body.data.probe).toBe('liveness');
     });
   });
 
@@ -74,7 +76,7 @@ describe('API Integration Tests (Express; same handlers as Fastify production)',
         url: 'https://www.amazon.com/dp/B09XS7GNLJ',
       };
 
-      const res = await request(app).post('/api/v1/products/detect').send(payload).expect(200);
+      const res = await authed(app).post('/api/v1/products/detect').send(payload).expect(200);
 
       expect(res.body.success).toBe(true);
       expect(res.body.data.product.universalProductId).toBe('SONY_WH-1000XM5');

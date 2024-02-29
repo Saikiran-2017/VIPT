@@ -78,13 +78,15 @@ Phase 2 profile & feedback:
 
 ## Alerts (`/alerts`)
 
+All alert routes require **`X-User-Id: <uuid>`** (the extension’s anonymous install id). The API key proves the client is allowed to call the backend; **`X-User-Id` is the only source of ownership** — do not send `userId` in the JSON body (rejected). List/delete/toggle are scoped to that header identity.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/alerts` | Create alert (body: `userId`, `productId`, `type`, optional `targetPrice`). |
-| GET | `/alerts/user/:userId` | List alerts for user. |
-| GET | `/alerts/product/:productId` | Active alerts for a product. |
-| DELETE | `/alerts/:alertId` | Delete alert (requires `userId` query per route). |
-| PATCH | `/alerts/:alertId/toggle` | Toggle enabled state. |
+| POST | `/alerts` | Create alert. Body: `productId`, `type`, optional `targetPrice`. Header: `X-User-Id`. |
+| GET | `/alerts/me` | List alerts for the authenticated user. Header: `X-User-Id`. |
+| GET | `/alerts/product/:productId` | Active alerts for that product **for this user only**. Header: `X-User-Id`. |
+| DELETE | `/alerts/:alertId` | Delete owned alert. Header: `X-User-Id`. |
+| PATCH | `/alerts/:alertId/toggle` | Toggle owned alert. Header: `X-User-Id`. |
 
 ---
 

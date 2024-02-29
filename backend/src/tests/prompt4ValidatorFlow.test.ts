@@ -1,5 +1,5 @@
-import request from 'supertest';
 import { createExpressApp } from '../server';
+import { authed } from './authTestHelpers';
 import { query } from '../models/database';
 import { cacheGet } from '../models/cache';
 
@@ -72,7 +72,7 @@ describe('Prompt 4: validator-first price_history writes', () => {
       url: 'https://example.com/p/1',
     };
 
-    await request(app).post('/api/v1/products/detect').send(payload).expect(200);
+    await authed(app).post('/api/v1/products/detect').send(payload).expect(200);
     expect(priceHistoryInserts).toBe(0);
   });
 
@@ -136,7 +136,7 @@ describe('Prompt 4: validator-first price_history writes', () => {
       url: 'https://example.com/p/2',
     };
 
-    await request(app).post('/api/v1/products/detect').send(payload).expect(200);
+    await authed(app).post('/api/v1/products/detect').send(payload).expect(200);
     expect(qualities.length).toBe(1);
     expect(['validated', 'suspicious']).toContain(qualities[0]);
   });

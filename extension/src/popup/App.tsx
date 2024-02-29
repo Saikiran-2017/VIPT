@@ -162,7 +162,9 @@ export default function App() {
           <div className="space-y-2 text-xs text-gray-400">
             <div className="flex justify-between items-center">
               <span>API Server</span>
-              <span className="text-vayu-400">localhost:3000</span>
+              <span className="text-vayu-400 break-all max-w-[200px] text-right">
+                {import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1'}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span>Auto-detect products</span>

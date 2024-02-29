@@ -1,10 +1,15 @@
-import request from 'supertest';
 import { createExpressApp } from '../server';
+import { authed } from './authTestHelpers';
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
 import { modelPerformanceService } from '../services/modelPerformanceService';
 import { predictionService } from '../services/predictionService';
 import { productProfiler } from '../services/productProfiler';
 import { feedbackService, OutcomeNotFoundError } from '../services/feedbackService';
+
+/** Valid UUIDs for routes that now validate params/bodies (Zod). */
+const UUID_FEEDBACK = '123e4567-e89b-12d3-a456-426614174001';
+const UUID_EVAL = '123e4567-e89b-12d3-a456-426614174002';
+const UUID_NOT_FOUND = '00000000-0000-0000-0000-000000000099';
 
 jest.mock('../services/feedbackService', () => {
   const actual = jest.requireActual('../services/feedbackService') as typeof import('../services/feedbackService');
@@ -31,7 +36,7 @@ jest.mock('../services/predictionService', () => ({
       factors: [],
       generatedAt: new Date(),
       predictedPrice: 100,
-      predictionOutcomeId: 'outcome-route-id',
+      predictionOutcomeId: '123e4567-e89b-12d3-a456-426614174001',
       featureVector: { dimension: 19, values: new Array(19).fill(0) },
       enrichedSignals: {
         freshnessMinutes: 60,
@@ -75,7 +80,7 @@ jest.mock('../services/predictionOutcomeEvaluationService', () => ({
   predictionOutcomeEvaluationService: {
     evaluateOutcome: jest.fn().mockResolvedValue({
       status: 'evaluated',
-      outcomeId: 'outcome-eval-id',
+      outcomeId: '123e4567-e89b-12d3-a456-426614174002',
       productId: 'pid',
       predictedPrice: 100,
       predictedAt: new Date(),
@@ -159,7 +164,7 @@ const mockGetSnapshot = modelPerformanceService.getModelPerformanceSnapshot as j
 describe('GET /api/v1/predictions/model-performance', () => {
   it('returns all model rollups', async () => {
     const app = createExpressApp();
-    const res = await request(app).get('/api/v1/predictions/model-performance').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/model-performance').expect(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.models).toHaveLength(1);
     expect(res.body.data.models[0].model_name).toBe('baseline_v1');
@@ -169,7 +174,7 @@ describe('GET /api/v1/predictions/model-performance', () => {
 
   it('returns single model snapshot', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .get('/api/v1/predictions/model-performance/baseline_v1')
       .expect(200);
     expect(res.body.data.model_name).toBe('baseline_v1');
@@ -178,7 +183,7 @@ describe('GET /api/v1/predictions/model-performance', () => {
 
   it('returns 404 when no data for model', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .get('/api/v1/predictions/model-performance/unknown-model')
       .expect(404);
     expect(res.body.success).toBe(false);
@@ -188,7 +193,7 @@ describe('GET /api/v1/predictions/model-performance', () => {
 describe('GET /api/v1/predictions/model-health', () => {
   it('returns health for all models', async () => {
     const app = createExpressApp();
-    const res = await request(app).get('/api/v1/predictions/model-health').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/model-health').expect(200);
     expect(res.body.data.models).toHaveLength(1);
     expect(res.body.data.models[0].modelName).toBe('baseline_v1');
     expect(res.body.data.models[0].healthStatus).toBe('healthy');
@@ -198,7 +203,7 @@ describe('GET /api/v1/predictions/model-health', () => {
 
   it('returns single model health', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .get('/api/v1/predictions/model-health/baseline_v1')
       .expect(200);
     expect(res.body.data.modelName).toBe('baseline_v1');
@@ -207,12 +212,12 @@ describe('GET /api/v1/predictions/model-health', () => {
 
   it('returns 404 when no health data for model', async () => {
     const app = createExpressApp();
-    await request(app).get('/api/v1/predictions/model-health/unknown-health').expect(404);
+    await authed(app).get('/api/v1/predictions/model-health/unknown-health').expect(404);
   });
 
   it('returns health summary', async () => {
     const app = createExpressApp();
-    const res = await request(app).get('/api/v1/predictions/model-health-summary').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/model-health-summary').expect(200);
     expect(res.body.data.totalModels).toBe(1);
     expect(res.body.data.healthyCount).toBe(1);
     expect(res.body.data.degradedCount).toBe(0);
@@ -230,7 +235,7 @@ describe('GET /api/v1/predictions/profile/:productId', () => {
 
   it('returns profile JSON and does not invoke baseline prediction', async () => {
     const app = createExpressApp();
-    const res = await request(app).get('/api/v1/predictions/profile/pid').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/profile/pid').expect(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.productId).toBe('pid');
     expect(res.body.data.volatilityClass).toBe('moderate');
@@ -241,7 +246,7 @@ describe('GET /api/v1/predictions/profile/:productId', () => {
 
   it('passes platform query to profiler', async () => {
     const app = createExpressApp();
-    await request(app).get('/api/v1/predictions/profile/pid?platform=amazon').expect(200);
+    await authed(app).get('/api/v1/predictions/profile/pid?platform=amazon').expect(200);
     expect(mockGetProductProfile).toHaveBeenCalledWith('pid', 'amazon');
   });
 });
@@ -250,11 +255,11 @@ describe('GET /api/v1/predictions/:productId', () => {
   const app = createExpressApp();
 
   it('returns prediction and omits featureVector without debug', async () => {
-    const res = await request(app).get('/api/v1/predictions/pid').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/pid').expect(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.predictedPrice).toBe(100);
     expect(res.body.data.featureVector).toBeUndefined();
-    expect(res.body.predictionOutcomeId).toBe('outcome-route-id');
+    expect(res.body.predictionOutcomeId).toBe(UUID_FEEDBACK);
     expect(res.body.data.enrichedSignals?.selectedPredictionMode).toBe('baseline_only');
     expect(Array.isArray(res.body.data.enrichedSignals?.signalFactors)).toBe(true);
     expect(res.body.data.trustContext?.trustTier).toBe('medium');
@@ -262,12 +267,12 @@ describe('GET /api/v1/predictions/:productId', () => {
   });
 
   it('includes featureVector when debug=1', async () => {
-    const res = await request(app).get('/api/v1/predictions/pid?debug=1').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/pid?debug=1').expect(200);
     expect(res.body.data.featureVector?.dimension).toBe(19);
   });
 
   it('includes evaluation when includeEvaluation=1', async () => {
-    const res = await request(app)
+    const res = await authed(app)
       .get('/api/v1/predictions/pid?includeEvaluation=1')
       .expect(200);
     expect(res.body.data.predictedPrice).toBe(100);
@@ -276,7 +281,7 @@ describe('GET /api/v1/predictions/:productId', () => {
   });
 
   it('omits evaluation without includeEvaluation', async () => {
-    const res = await request(app).get('/api/v1/predictions/pid').expect(200);
+    const res = await authed(app).get('/api/v1/predictions/pid').expect(200);
     expect(res.body.evaluation).toBeUndefined();
   });
 });
@@ -289,7 +294,7 @@ describe('POST /api/v1/predictions/outcomes/:outcomeId/evaluate', () => {
   beforeEach(() => {
     mockEvaluateOutcome.mockResolvedValue({
       status: 'evaluated',
-      outcomeId: 'outcome-eval-id',
+      outcomeId: '123e4567-e89b-12d3-a456-426614174002',
       productId: 'pid',
       predictedPrice: 100,
       predictedAt: new Date(),
@@ -304,8 +309,8 @@ describe('POST /api/v1/predictions/outcomes/:outcomeId/evaluate', () => {
 
   it('returns evaluation payload', async () => {
     const app = createExpressApp();
-    const res = await request(app)
-      .post('/api/v1/predictions/outcomes/outcome-eval-id/evaluate')
+    const res = await authed(app)
+      .post(`/api/v1/predictions/outcomes/${UUID_EVAL}/evaluate`)
       .send({})
       .expect(200);
     expect(res.body.success).toBe(true);
@@ -316,13 +321,32 @@ describe('POST /api/v1/predictions/outcomes/:outcomeId/evaluate', () => {
   it('returns 404 when outcome is not found', async () => {
     mockEvaluateOutcome.mockResolvedValueOnce({
       status: 'not_found',
-      outcomeId: 'missing',
+      outcomeId: UUID_NOT_FOUND,
     });
     const app = createExpressApp();
-    const res = await request(app)
-      .post('/api/v1/predictions/outcomes/missing/evaluate')
+    const res = await authed(app)
+      .post(`/api/v1/predictions/outcomes/${UUID_NOT_FOUND}/evaluate`)
       .send({})
       .expect(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 400 for invalid outcomeId param (not a UUID)', async () => {
+    const app = createExpressApp();
+    const res = await authed(app)
+      .post('/api/v1/predictions/outcomes/not-a-uuid/evaluate')
+      .send({})
+      .expect(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/Validation error/i);
+  });
+
+  it('returns 400 for invalid evaluate body (unknown keys)', async () => {
+    const app = createExpressApp();
+    const res = await authed(app)
+      .post(`/api/v1/predictions/outcomes/${UUID_EVAL}/evaluate`)
+      .send({ foo: 1 })
+      .expect(400);
     expect(res.body.success).toBe(false);
   });
 });
@@ -341,7 +365,7 @@ describe('POST /api/v1/predictions/outcomes/evaluate-pending', () => {
 
   it('returns batch summary', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .post('/api/v1/predictions/outcomes/evaluate-pending')
       .send({ limit: 10, olderThanHours: 1, accurateMapeThreshold: 4 })
       .expect(200);
@@ -354,12 +378,22 @@ describe('POST /api/v1/predictions/outcomes/evaluate-pending', () => {
       accurateMapeThreshold: 4,
     });
   });
+
+  it('returns 400 for invalid evaluate-pending body', async () => {
+    const app = createExpressApp();
+    const res = await authed(app)
+      .post('/api/v1/predictions/outcomes/evaluate-pending')
+      .send({ limit: -1 })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/Validation error/i);
+  });
 });
 
 describe('POST /api/v1/predictions/model-performance/refresh', () => {
   it('returns rollup summary', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .post('/api/v1/predictions/model-performance/refresh')
       .send({ limit: 5, lookbackDays: 30, modelName: 'baseline_v1' })
       .expect(200);
@@ -382,7 +416,7 @@ describe('POST /api/v1/predictions/feedback', () => {
     mockSubmitFeedback.mockReset();
     mockSubmitFeedback.mockResolvedValue({
       feedbackId: 'fb-1',
-      predictionOutcomeId: 'outcome-route-id',
+      predictionOutcomeId: '123e4567-e89b-12d3-a456-426614174001',
       feedbackType: 'correct',
       confidenceRating: 0.9,
       feedbackReason: 'matches',
@@ -392,10 +426,10 @@ describe('POST /api/v1/predictions/feedback', () => {
 
   it('submits feedback and returns stored row', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .post('/api/v1/predictions/feedback')
       .send({
-        predictionOutcomeId: 'outcome-route-id',
+        predictionOutcomeId: '123e4567-e89b-12d3-a456-426614174001',
         feedbackType: 'correct',
         confidenceRating: 0.9,
         feedbackReason: 'matches',
@@ -408,7 +442,7 @@ describe('POST /api/v1/predictions/feedback', () => {
 
   it('returns 400 when predictionOutcomeId missing', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .post('/api/v1/predictions/feedback')
       .send({ feedbackType: 'correct' })
       .expect(400);
@@ -417,9 +451,32 @@ describe('POST /api/v1/predictions/feedback', () => {
 
   it('returns 400 for invalid feedbackType', async () => {
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .post('/api/v1/predictions/feedback')
-      .send({ predictionOutcomeId: 'x', feedbackType: 'maybe' })
+      .send({ predictionOutcomeId: UUID_FEEDBACK, feedbackType: 'maybe' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 400 for invalid predictionOutcomeId format', async () => {
+    const app = createExpressApp();
+    const res = await authed(app)
+      .post('/api/v1/predictions/feedback')
+      .send({ predictionOutcomeId: 'x', feedbackType: 'correct' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/Validation error/i);
+  });
+
+  it('returns 400 for unknown keys on feedback body', async () => {
+    const app = createExpressApp();
+    const res = await authed(app)
+      .post('/api/v1/predictions/feedback')
+      .send({
+        predictionOutcomeId: '123e4567-e89b-12d3-a456-426614174001',
+        feedbackType: 'correct',
+        extra: true,
+      })
       .expect(400);
     expect(res.body.success).toBe(false);
   });
@@ -427,9 +484,9 @@ describe('POST /api/v1/predictions/feedback', () => {
   it('returns 404 when outcome does not exist', async () => {
     mockSubmitFeedback.mockRejectedValueOnce(new OutcomeNotFoundError());
     const app = createExpressApp();
-    const res = await request(app)
+    const res = await authed(app)
       .post('/api/v1/predictions/feedback')
-      .send({ predictionOutcomeId: 'missing', feedbackType: 'uncertain' })
+      .send({ predictionOutcomeId: UUID_NOT_FOUND, feedbackType: 'uncertain' })
       .expect(404);
     expect(res.body.success).toBe(false);
   });
@@ -443,7 +500,7 @@ describe('GET /api/v1/predictions/feedback/:outcomeId', () => {
     mockGetFeedbackForOutcome.mockResolvedValue([
       {
         feedbackId: 'fb-1',
-        predictionOutcomeId: 'oid',
+        predictionOutcomeId: '123e4567-e89b-12d3-a456-426614174001',
         feedbackType: 'correct',
         confidenceRating: null,
         feedbackReason: null,
@@ -454,16 +511,18 @@ describe('GET /api/v1/predictions/feedback/:outcomeId', () => {
 
   it('returns feedback list when outcome exists', async () => {
     const app = createExpressApp();
-    const res = await request(app).get('/api/v1/predictions/feedback/oid').expect(200);
+    const res = await authed(app)
+      .get(`/api/v1/predictions/feedback/${UUID_FEEDBACK}`)
+      .expect(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.items).toHaveLength(1);
-    expect(mockGetFeedbackForOutcome).toHaveBeenCalledWith('oid');
+    expect(mockGetFeedbackForOutcome).toHaveBeenCalledWith(UUID_FEEDBACK);
   });
 
   it('returns 404 when outcome missing', async () => {
     mockOutcomeExists.mockResolvedValueOnce(false);
     const app = createExpressApp();
-    await request(app).get('/api/v1/predictions/feedback/missing').expect(404);
+    await authed(app).get('/api/v1/predictions/feedback/missing').expect(404);
   });
 });
 
@@ -471,7 +530,7 @@ describe('POST /api/v1/predictions/outcomes routes (integration)', () => {
   it('single-outcome evaluate route still works after batch route exists', async () => {
     mockEvaluateOutcome.mockResolvedValue({
       status: 'evaluated',
-      outcomeId: 'outcome-eval-id',
+      outcomeId: '123e4567-e89b-12d3-a456-426614174002',
       productId: 'pid',
       predictedPrice: 100,
       predictedAt: new Date(),
@@ -483,8 +542,8 @@ describe('POST /api/v1/predictions/outcomes routes (integration)', () => {
       wasAccurate: true,
     });
     const app = createExpressApp();
-    const res = await request(app)
-      .post('/api/v1/predictions/outcomes/outcome-eval-id/evaluate')
+    const res = await authed(app)
+      .post(`/api/v1/predictions/outcomes/${UUID_EVAL}/evaluate`)
       .send({})
       .expect(200);
     expect(res.body.status).toBe('evaluated');

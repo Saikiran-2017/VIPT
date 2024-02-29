@@ -57,6 +57,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       CORS_ORIGIN: "*"
+      # Match `backend/.env.example` / extension `VITE_API_KEY` when testing the extension against Compose.
+      API_KEY: change-me-local-dev-only
     ports:
       - "3000:3000"
     depends_on:

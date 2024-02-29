@@ -37,11 +37,8 @@ export default function AlertPanel({ productId }: Props) {
   }, [productId]);
 
   async function loadAlerts() {
-    const stored = await chrome.storage.local.get('userId');
-    const userId = stored.userId;
-
     chrome.runtime.sendMessage(
-      { type: 'GET_ALERTS', payload: { userId } },
+      { type: 'GET_ALERTS', payload: {} },
       (response) => {
         if (response?.success && response.data) {
           setAlerts(response.data.filter((a: Alert & { productId: string }) => a.productId === productId));
@@ -61,19 +58,11 @@ export default function AlertPanel({ productId }: Props) {
       return;
     }
     setCreateStatus(null);
-    const stored = await chrome.storage.local.get('userId');
-    const userId = stored.userId;
-
-    if (!userId) {
-      setCreateStatus({ type: 'error', message: 'User ID not found. Try reinstalling the extension.' });
-      return;
-    }
 
     chrome.runtime.sendMessage(
       {
         type: 'SET_ALERT',
         payload: {
-          userId,
           productId,
           type: alertType,
           targetPrice: targetPrice ? parseFloat(targetPrice) : undefined,
@@ -98,11 +87,8 @@ export default function AlertPanel({ productId }: Props) {
   }
 
   async function deleteAlert(alertId: string) {
-    const stored = await chrome.storage.local.get('userId');
-    const userId = stored.userId;
-
     chrome.runtime.sendMessage(
-      { type: 'DELETE_ALERT', payload: { alertId, userId } },
+      { type: 'DELETE_ALERT', payload: { alertId } },
       (response) => {
         if (response?.success) {
           loadAlerts();

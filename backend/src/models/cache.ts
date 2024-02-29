@@ -2,7 +2,25 @@ import { createClient, RedisClientType } from 'redis';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
-let redisClient: RedisClientType;
+let redisClient: RedisClientType | undefined;
+
+export type RedisReadinessStatus = 'connected' | 'not_configured' | 'unavailable';
+
+/**
+ * Used by GET /ready: report whether the optional Redis client is usable (never throws).
+ */
+export async function getRedisReadiness(): Promise<{ status: RedisReadinessStatus }> {
+  if (!redisClient) {
+    return { status: 'not_configured' };
+  }
+  try {
+    await redisClient.ping();
+    return { status: 'connected' };
+  } catch (err) {
+    logger.warn('Redis readiness ping failed', err);
+    return { status: 'unavailable' };
+  }
+}
 
 export async function initRedis(): Promise<RedisClientType> {
   const redisUrl = process.env.REDIS_URL?.trim();
@@ -38,6 +56,7 @@ export function getRedisClient(): RedisClientType {
 }
 
 export async function cacheGet<T>(key: string): Promise<T | null> {
+  if (!redisClient) return null;
   try {
     const data = await redisClient.get(key);
     return data ? JSON.parse(data) : null;
@@ -48,6 +67,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 }
 
 export async function cacheSet(key: string, value: unknown, ttlSeconds: number): Promise<void> {
+  if (!redisClient) return;
   try {
     await redisClient.setEx(key, ttlSeconds, JSON.stringify(value));
   } catch {
@@ -56,6 +76,7 @@ export async function cacheSet(key: string, value: unknown, ttlSeconds: number):
 }
 
 export async function cacheDelete(key: string): Promise<void> {
+  if (!redisClient) return;
   try {
     await redisClient.del(key);
   } catch {
@@ -64,6 +85,7 @@ export async function cacheDelete(key: string): Promise<void> {
 }
 
 export async function cacheFlush(pattern: string): Promise<void> {
+  if (!redisClient) return;
   try {
     const keys = await redisClient.keys(pattern);
     if (keys.length > 0) {

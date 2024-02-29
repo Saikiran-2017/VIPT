@@ -6,7 +6,14 @@ import { modelPerformanceService } from '../services/modelPerformanceService';
 import { modelHealthService } from '../services/modelHealthService';
 import { productProfiler } from '../services/productProfiler';
 import { feedbackService, OutcomeNotFoundError } from '../services/feedbackService';
-import { Platform, type PredictionFeedbackInput, type PredictionFeedbackType } from '@shared/types';
+import { Platform, type PredictionFeedbackInput } from '@shared/types';
+import { validate } from '../middleware/validation';
+import {
+  evaluateOutcomeBodySchema,
+  evaluateOutcomeParamsSchema,
+  evaluatePendingBodySchema,
+  predictionFeedbackBodySchema,
+} from './schemas/postSchemas';
 
 const router = Router();
 
@@ -168,11 +175,10 @@ router.post(
  */
 router.post(
   '/outcomes/evaluate-pending',
+  validate(evaluatePendingBodySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const limit = parseOptionalFiniteNumber(req.body?.limit);
-      const olderThanHours = parseOptionalFiniteNumber(req.body?.olderThanHours);
-      const accurateMapeThreshold = parseOptionalFiniteNumber(req.body?.accurateMapeThreshold);
+      const { limit, olderThanHours, accurateMapeThreshold } = req.body;
 
       const summary = await predictionOutcomeEvaluationService.evaluatePendingOutcomes({
         ...(limit !== undefined ? { limit } : {}),
@@ -197,17 +203,15 @@ router.post(
  */
 router.post(
   '/outcomes/:outcomeId/evaluate',
+  validate(evaluateOutcomeParamsSchema, 'params'),
+  validate(evaluateOutcomeBodySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { outcomeId } = req.params;
-      const thresholdRaw = req.body?.accurateMapeThreshold;
-      const accurateMapeThreshold =
-        typeof thresholdRaw === 'number' && Number.isFinite(thresholdRaw)
-          ? thresholdRaw
-          : undefined;
+      const { accurateMapeThreshold } = req.body;
 
       const result = await predictionOutcomeEvaluationService.evaluateOutcome(outcomeId, {
-        accurateMapeThreshold,
+        ...(accurateMapeThreshold !== undefined ? { accurateMapeThreshold } : {}),
       });
 
       if (result.status === 'not_found') {
@@ -231,58 +235,44 @@ router.post(
   }
 );
 
-const FEEDBACK_TYPES = new Set<PredictionFeedbackType>(['correct', 'incorrect', 'uncertain']);
-
 /**
  * POST /api/v1/predictions/feedback
  * Phase 2: record feedback for a prediction outcome.
  */
-router.post('/feedback', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const outcomeRaw = req.body?.predictionOutcomeId ?? req.body?.outcomeId;
-    const feedbackType = req.body?.feedbackType as string | undefined;
-    if (typeof outcomeRaw !== 'string' || outcomeRaw.trim() === '') {
-      res.status(400).json({
-        success: false,
-        error: 'predictionOutcomeId is required',
-        timestamp: new Date(),
-      });
-      return;
-    }
-    if (typeof feedbackType !== 'string' || !FEEDBACK_TYPES.has(feedbackType as PredictionFeedbackType)) {
-      res.status(400).json({
-        success: false,
-        error: 'feedbackType must be one of: correct, incorrect, uncertain',
-        timestamp: new Date(),
-      });
-      return;
-    }
+router.post(
+  '/feedback',
+  validate(predictionFeedbackBodySchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { predictionOutcomeId, outcomeId, feedbackType, confidenceRating, feedbackReason } =
+        req.body;
+      const outcomeRaw = predictionOutcomeId ?? outcomeId;
 
-    const input: PredictionFeedbackInput = {
-      feedbackType: feedbackType as PredictionFeedbackType,
-      confidenceRating: parseOptionalFiniteNumber(req.body?.confidenceRating),
-      feedbackReason:
-        typeof req.body?.feedbackReason === 'string' ? req.body.feedbackReason : undefined,
-    };
+      const input: PredictionFeedbackInput = {
+        feedbackType,
+        confidenceRating,
+        feedbackReason,
+      };
 
-    const data = await feedbackService.submitFeedback(outcomeRaw.trim(), input);
-    res.json({
-      success: true,
-      data,
-      timestamp: new Date(),
-    });
-  } catch (error) {
-    if (error instanceof OutcomeNotFoundError) {
-      res.status(404).json({
-        success: false,
-        error: error.message,
+      const data = await feedbackService.submitFeedback(outcomeRaw, input);
+      res.json({
+        success: true,
+        data,
         timestamp: new Date(),
       });
-      return;
+    } catch (error) {
+      if (error instanceof OutcomeNotFoundError) {
+        res.status(404).json({
+          success: false,
+          error: error.message,
+          timestamp: new Date(),
+        });
+        return;
+      }
+      next(error);
     }
-    next(error);
   }
-});
+);
 
 /**
  * GET /api/v1/predictions/feedback/:outcomeId

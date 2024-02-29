@@ -8,7 +8,31 @@
  * - Product data caching
  */
 
-const API_BASE = 'http://localhost:3000/api/v1';
+/** Set at build time via `VITE_API_BASE_URL` (see `extension/.env.example`). */
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+
+function apiHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (API_KEY) h['X-API-Key'] = API_KEY;
+  return h;
+}
+
+/** Extension anonymous user id — required for `/alerts` routes (ownership). */
+function apiHeadersWithUser(userId: string): Record<string, string> {
+  const h = apiHeaders();
+  h['X-User-Id'] = userId;
+  return h;
+}
+
+function apiOriginHint(): string {
+  try {
+    return new URL(API_BASE).origin;
+  } catch {
+    return 'the configured API';
+  }
+}
 
 // ─── Message Handling ─────────────────────────────────────────
 
@@ -40,14 +64,34 @@ async function handleMessage(message: any, _sender: chrome.runtime.MessageSender
     case 'GET_EVENTS':
       return apiGet('/events/upcoming?days=60');
 
-    case 'SET_ALERT':
-      return apiPost('/alerts', message.payload);
+    case 'SET_ALERT': {
+      const uid = await getStoredUserId();
+      if (!uid) {
+        return { success: false, error: 'User ID not found. Try reinstalling the extension.' };
+      }
+      const { productId, type, targetPrice } = message.payload;
+      return apiPost(
+        '/alerts',
+        { productId, type, targetPrice },
+        uid
+      );
+    }
 
-    case 'GET_ALERTS':
-      return apiGet(`/alerts/user/${message.payload.userId}`);
+    case 'GET_ALERTS': {
+      const uid = await getStoredUserId();
+      if (!uid) {
+        return { success: false, error: 'User ID not found. Try reinstalling the extension.' };
+      }
+      return apiGet('/alerts/me', uid);
+    }
 
-    case 'DELETE_ALERT':
-      return apiDelete(`/alerts/${message.payload.alertId}?userId=${message.payload.userId}`);
+    case 'DELETE_ALERT': {
+      const uid = await getStoredUserId();
+      if (!uid) {
+        return { success: false, error: 'User ID not found. Try reinstalling the extension.' };
+      }
+      return apiDelete(`/alerts/${message.payload.alertId}`, uid);
+    }
 
     default:
       return { error: 'Unknown message type' };
@@ -90,11 +134,16 @@ async function handleProductDetected(product: any): Promise<any> {
 
 // ─── API Helpers ──────────────────────────────────────────────
 
-async function apiGet(endpoint: string): Promise<any> {
+async function getStoredUserId(): Promise<string | undefined> {
+  const stored = await chrome.storage.local.get('userId');
+  return typeof stored.userId === 'string' ? stored.userId : undefined;
+}
+
+async function apiGet(endpoint: string, extensionUserId?: string): Promise<any> {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: extensionUserId ? apiHeadersWithUser(extensionUserId) : apiHeaders(),
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -103,15 +152,18 @@ async function apiGet(endpoint: string): Promise<any> {
     return response.json();
   } catch (error) {
     console.error(`API GET ${endpoint} failed:`, error);
-    return { success: false, error: 'Cannot connect to backend server. Is it running on localhost:3000?' };
+    return {
+      success: false,
+      error: `Cannot connect to backend (${apiOriginHint()}). Check URL, API key, and network.`,
+    };
   }
 }
 
-async function apiPost(endpoint: string, data: any): Promise<any> {
+async function apiPost(endpoint: string, data: any, extensionUserId?: string): Promise<any> {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: extensionUserId ? apiHeadersWithUser(extensionUserId) : apiHeaders(),
       body: JSON.stringify(data),
     });
     if (!response.ok) {
@@ -121,15 +173,18 @@ async function apiPost(endpoint: string, data: any): Promise<any> {
     return response.json();
   } catch (error) {
     console.error(`API POST ${endpoint} failed:`, error);
-    return { success: false, error: 'Cannot connect to backend server. Is it running on localhost:3000?' };
+    return {
+      success: false,
+      error: `Cannot connect to backend (${apiOriginHint()}). Check URL, API key, and network.`,
+    };
   }
 }
 
-async function apiDelete(endpoint: string): Promise<any> {
+async function apiDelete(endpoint: string, extensionUserId?: string): Promise<any> {
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: extensionUserId ? apiHeadersWithUser(extensionUserId) : apiHeaders(),
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
@@ -138,7 +193,10 @@ async function apiDelete(endpoint: string): Promise<any> {
     return response.json();
   } catch (error) {
     console.error(`API DELETE ${endpoint} failed:`, error);
-    return { success: false, error: 'Cannot connect to backend server. Is it running on localhost:3000?' };
+    return {
+      success: false,
+      error: `Cannot connect to backend (${apiOriginHint()}). Check URL, API key, and network.`,
+    };
   }
 }
 

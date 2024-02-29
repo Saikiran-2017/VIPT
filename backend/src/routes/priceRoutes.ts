@@ -3,6 +3,8 @@ import { priceAggregationService } from '../services/priceAggregationService';
 import { crossPlatformService } from '../services/crossPlatformService';
 import { Platform } from '@shared/types';
 import { query } from '../models/database';
+import { validate } from '../middleware/validation';
+import { recordPriceBodySchema } from './schemas/postSchemas';
 
 const router = Router();
 
@@ -100,6 +102,7 @@ router.get(
  */
 router.post(
   '/record',
+  validate(recordPriceBodySchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const {
@@ -126,7 +129,7 @@ router.post(
         url,
         platformProductId,
         deliveryEstimate,
-        currency ?? 'USD',
+        currency,
         confidence
       );
 

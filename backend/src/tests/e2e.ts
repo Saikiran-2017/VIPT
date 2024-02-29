@@ -3,9 +3,23 @@ import { config } from '../config';
 
 const PORT = config.server.port;
 const API_BASE = `http://localhost:${PORT}/api/v1`;
+const API_KEY = process.env.API_KEY?.trim();
+
+const api = axios.create({
+  baseURL: API_BASE,
+  headers:
+    API_KEY && !config.auth.skipAuth
+      ? { 'X-API-Key': API_KEY }
+      : {},
+});
 
 async function runE2E() {
   console.log('🚀 Starting E2E Verification...');
+  if (!config.auth.skipAuth && !API_KEY) {
+    console.warn(
+      'WARNING: backend/.env should set API_KEY (same as server) or run server with SKIP_AUTH=1 for keyless local runs.'
+    );
+  }
 
   try {
     // 1. Check Health
@@ -31,7 +45,7 @@ async function runE2E() {
 
     // 3. Record price on another platform
     console.log('\n3. Recording price from another platform (Walmart)...');
-    await axios.post(`${API_BASE}/prices/record`, {
+    await api.post('/prices/record', {
       productId: product.id,
       platform: 'walmart',
       price: 330.00,
@@ -43,30 +57,34 @@ async function runE2E() {
 
     // 4. Get Comparison
     console.log('\n4. Fetching Price Comparison...');
-    const comparisonRes = await axios.get(`${API_BASE}/prices/compare/${product.id}`);
+    const comparisonRes = await api.get(`/prices/compare/${product.id}`);
     console.log('✅ Found', comparisonRes.data.data.listings.length, 'listings');
     console.log('✅ Lowest price:', comparisonRes.data.data.lowestPrice.totalEffectivePrice);
 
     // 5. Get Prediction
     console.log('\n5. Fetching Price Prediction...');
-    const predictionRes = await axios.get(`${API_BASE}/predictions/${product.id}`);
+    const predictionRes = await api.get(`/predictions/${product.id}`);
     console.log('✅ Prediction confidence:', predictionRes.data.data.confidenceScore);
     console.log('✅ Drop probability:', predictionRes.data.data.dropProbability);
 
     // 6. Get Recommendation
     console.log('\n6. Fetching Recommendation...');
-    const recommendationRes = await axios.get(`${API_BASE}/recommendation/${product.id}`);
+    const recommendationRes = await api.get(`/recommendation/${product.id}`);
     console.log('✅ Action:', recommendationRes.data.data.action);
     console.log('✅ Reasoning:', recommendationRes.data.data.reasoning[0]);
 
     // 7. Create Alert
     console.log('\n7. Creating Price Alert...');
-    const alertRes = await axios.post(`${API_BASE}/alerts`, {
-      userId: '00000000-0000-0000-0000-000000000000', // Demo user
-      productId: product.id,
-      type: 'target_price',
-      targetPrice: 300.00
-    });
+    const e2eUserId = '00000000-0000-0000-0000-000000000001';
+    const alertRes = await api.post(
+      '/alerts',
+      {
+        productId: product.id,
+        type: 'target_price',
+        targetPrice: 300.0,
+      },
+      { headers: { 'X-User-Id': e2eUserId } }
+    );
     console.log('✅ Alert created ID:', alertRes.data.data.id);
 
     console.log('\n✨ E2E Verification Completed Successfully!');

@@ -10,6 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { testConnection } from './models/database';
+import { getReadinessState } from './readiness';
 import { initRedis } from './models/cache';
 import { runMigrations } from './db/migrate';
 import { startBullMqPriceInfrastructure } from './queues/bootstrap';
@@ -28,6 +29,7 @@ import {
   notFoundHandler,
   requestLogger,
 } from './middleware/errorHandler';
+import { apiKeyAuthMiddleware } from './middleware/apiKeyAuth';
 
 const API_PREFIX = '/api/v1';
 
@@ -46,7 +48,7 @@ export function createExpressApp(): express.Application {
     cors({
       origin: config.server.corsOrigin,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
     })
   );
 
@@ -76,6 +78,7 @@ export function createExpressApp(): express.Application {
       success: true,
       data: {
         status: 'healthy',
+        probe: 'liveness',
         service: 'vipt',
         version: '1.0.0',
         uptime: process.uptime(),
@@ -83,6 +86,57 @@ export function createExpressApp(): express.Application {
       },
     });
   });
+
+  app.get('/ready', async (_req: express.Request, res: express.Response) => {
+    try {
+      const { ready, checks } = await getReadinessState();
+      if (!ready) {
+        res.status(503).json({
+          success: false,
+          error: 'Service unavailable',
+          data: {
+            status: 'not_ready',
+            probe: 'readiness',
+            service: 'vipt',
+            version: '1.0.0',
+            checks,
+            timestamp: new Date(),
+          },
+        });
+        return;
+      }
+      res.json({
+        success: true,
+        data: {
+          status: 'ready',
+          probe: 'readiness',
+          service: 'vipt',
+          version: '1.0.0',
+          checks,
+          timestamp: new Date(),
+        },
+      });
+    } catch (err) {
+      logger.error('Readiness check failed', err);
+      res.status(503).json({
+        success: false,
+        error: 'Service unavailable',
+        data: {
+          status: 'not_ready',
+          probe: 'readiness',
+          service: 'vipt',
+          version: '1.0.0',
+          checks: {
+            database: { status: 'unavailable' },
+            redis: { status: 'unavailable', ready: false },
+          },
+          timestamp: new Date(),
+        },
+      });
+    }
+  });
+
+  app.use(API_PREFIX, apiKeyAuthMiddleware);
 
   app.use(`${API_PREFIX}/products`, productRoutes);
   app.use(`${API_PREFIX}/prices`, priceRoutes);
@@ -114,6 +168,17 @@ export async function buildServer(): Promise<FastifyInstance> {
 
 async function startServer(): Promise<void> {
   try {
+    if (
+      config.server.nodeEnv === 'production' &&
+      !config.auth.skipAuth &&
+      !config.auth.apiKey
+    ) {
+      logger.error(
+        'Refusing to start: API_KEY is required in production (set SKIP_AUTH only for non-production use)'
+      );
+      process.exit(1);
+    }
+
     const dbConnected = await testConnection();
     if (!dbConnected) {
       logger.warn('Database connection failed - server will start but DB operations will fail');
@@ -162,7 +227,8 @@ async function startServer(): Promise<void> {
 ║  Port:     ${config.server.port}                                   ║
 ║  Env:      ${config.server.nodeEnv.padEnd(21)}            ║
 ║  API:      http://localhost:${config.server.port}/api/v1             ║
-║  Health:   http://localhost:${config.server.port}/health             ║
+║  Liveness: http://localhost:${config.server.port}/health             ║
+║  Readiness:http://localhost:${config.server.port}/ready              ║
 ╚═══════════════════════════════════════════════════════╝
     `);
   } catch (error) {

@@ -85,7 +85,26 @@ export class AlertService {
   }
 
   /**
-   * Get active alerts for a product
+   * Active alerts for a product **and** user (API — ownership-safe).
+   */
+  async getUserAlertsForProduct(
+    userId: string,
+    productId: string
+  ): Promise<PriceAlert[]> {
+    const result = await query(
+      `SELECT a.*, p.name as product_name
+       FROM alerts a
+       JOIN products p ON a.product_id = p.id
+       WHERE a.user_id = $1 AND a.product_id = $2 AND a.is_active = true
+       ORDER BY a.created_at DESC`,
+      [userId, productId]
+    );
+
+    return result.rows.map(this.mapRowToAlert);
+  }
+
+  /**
+   * Get active alerts for a product (internal: price checks / workers).
    */
   async getProductAlerts(productId: string): Promise<PriceAlert[]> {
     const result = await query(
@@ -189,16 +208,19 @@ export class AlertService {
   }
 
   /**
-   * Toggle alert active status
+   * Toggle alert active status. Returns `null` if no row matched (wrong id or not owned).
    */
-  async toggleAlert(alertId: string, userId: string): Promise<boolean> {
+  async toggleAlert(alertId: string, userId: string): Promise<boolean | null> {
     const result = await query(
       `UPDATE alerts SET is_active = NOT is_active
        WHERE id = $1 AND user_id = $2
        RETURNING is_active`,
       [alertId, userId]
     );
-    return result.rows[0]?.is_active ?? false;
+    if (result.rows.length === 0) {
+      return null;
+    }
+    return result.rows[0].is_active as boolean;
   }
 
   // ─── Mapping Helpers ─────────────────────────────────────────

@@ -2,31 +2,32 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { alertService } from '../services/alertService';
 import { validate } from '../middleware/validation';
+import { requireExtensionUserId } from '../middleware/extensionUserIdentity';
 import { AlertType } from '@shared/types';
 
 const router = Router();
 
-// ─── Validation Schemas ──────────────────────────────────────
+const createAlertSchema = z
+  .object({
+    productId: z.string().uuid(),
+    type: z.nativeEnum(AlertType),
+    targetPrice: z.number().positive().optional(),
+  })
+  .strict();
 
-const createAlertSchema = z.object({
-  userId: z.string().uuid(),
-  productId: z.string().uuid(),
-  type: z.nativeEnum(AlertType),
-  targetPrice: z.number().positive().optional(),
-});
-
-// ─── Routes ──────────────────────────────────────────────────
+router.use(requireExtensionUserId);
 
 /**
  * POST /api/v1/alerts
- * Create a new price alert
+ * Create a price alert for the authenticated extension user (`X-User-Id`).
  */
 router.post(
   '/',
   validate(createAlertSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { userId, productId, type, targetPrice } = req.body;
+      const userId = req.extensionUserId!;
+      const { productId, type, targetPrice } = req.body;
       const alert = await alertService.createAlert(userId, productId, type, targetPrice);
 
       res.status(201).json({
@@ -41,37 +42,35 @@ router.post(
 );
 
 /**
- * GET /api/v1/alerts/user/:userId
- * Get all alerts for a user
+ * GET /api/v1/alerts/me
+ * List alerts for the authenticated user (from `X-User-Id` only).
  */
-router.get(
-  '/user/:userId',
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { userId } = req.params;
-      const alerts = await alertService.getUserAlerts(userId);
+router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.extensionUserId!;
+    const alerts = await alertService.getUserAlerts(userId);
 
-      res.json({
-        success: true,
-        data: alerts,
-        timestamp: new Date(),
-      });
-    } catch (error) {
-      next(error);
-    }
+    res.json({
+      success: true,
+      data: alerts,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * GET /api/v1/alerts/product/:productId
- * Get active alerts for a product
+ * Active alerts for this product **for the authenticated user** only.
  */
 router.get(
   '/product/:productId',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const userId = req.extensionUserId!;
       const { productId } = req.params;
-      const alerts = await alertService.getProductAlerts(productId);
+      const alerts = await alertService.getUserAlertsForProduct(userId, productId);
 
       res.json({
         success: true,
@@ -86,23 +85,14 @@ router.get(
 
 /**
  * DELETE /api/v1/alerts/:alertId
- * Delete an alert
+ * Delete an alert owned by the authenticated user.
  */
 router.delete(
   '/:alertId',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const userId = req.extensionUserId!;
       const { alertId } = req.params;
-      const userId = req.query.userId as string;
-
-      if (!userId) {
-        res.status(400).json({
-          success: false,
-          error: 'userId query parameter is required',
-          timestamp: new Date(),
-        });
-        return;
-      }
 
       const deleted = await alertService.deleteAlert(alertId, userId);
 
@@ -128,25 +118,25 @@ router.delete(
 
 /**
  * PATCH /api/v1/alerts/:alertId/toggle
- * Toggle alert active status
+ * Toggle alert active status (owner only).
  */
 router.patch(
   '/:alertId/toggle',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const userId = req.extensionUserId!;
       const { alertId } = req.params;
-      const userId = req.query.userId as string;
 
-      if (!userId) {
-        res.status(400).json({
+      const isActive = await alertService.toggleAlert(alertId, userId);
+
+      if (isActive === null) {
+        res.status(404).json({
           success: false,
-          error: 'userId query parameter is required',
+          error: 'Alert not found',
           timestamp: new Date(),
         });
         return;
       }
-
-      const isActive = await alertService.toggleAlert(alertId, userId);
 
       res.json({
         success: true,
