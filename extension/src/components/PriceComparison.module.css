@@ -1,0 +1,38 @@
+.platform-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: #666;
+}
+
+.platform-amazon {
+  background-color: #FF9900;
+}
+
+.platform-flipkart {
+  background-color: #2874F0;
+}
+
+.platform-walmart {
+  background-color: #0071DC;
+}
+
+.platform-ebay {
+  background-color: #E53238;
+}
+
+.platform-bestbuy {
+  background-color: #0046BE;
+}
+
+.platform-target {
+  background-color: #CC0000;
+}
+
+.platform-newegg {
+  background-color: #D16106;
+}
+
+.platform-aliexpress {
+  background-color: #E43225;
+}

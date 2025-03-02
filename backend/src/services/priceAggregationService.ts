@@ -1,0 +1,389 @@
+import { query } from '../models/database';
+import { cacheGet, cacheSet } from '../models/cache';
+import { logger } from '../utils/logger';
+import {
+  PlatformListing,
+  PriceComparison,
+  PriceHistoryEntry,
+  PriceHistoryStats,
+  Platform,
+  ProductVolatility,
+  PricePoint,
+  FeatureVector,
+} from '@shared/types';
+import { API_CONFIG, PREDICTION_CONFIG, HISTORY_CONFIG } from '@shared/constants';
+import { v4 as uuidv4 } from 'uuid';
+import { antiManipulationService } from './antiManipulationService';
+import { recommendationService } from './recommendationService';
+import { alertService } from './alertService';
+import { dataValidator } from './DataValidator';
+import { loadValidatedFeatureContext } from './priceHistoryForPrediction';
+
+/**
+ * Price Aggregation Service
+ * 
+ * Handles:
+ * - Cross-platform price comparison
+ * - Price history tracking
+ * - Price volatility calculation
+ * - Recording new price observations
+ */
+export class PriceAggregationService {
+
+  /**
+   * Get cross-platform price comparison for a product
+   */
+  async getComparison(productId: string): Promise<PriceComparison> {
+    const cacheKey = `comparison:${productId}`;
+    const cached = await cacheGet<PriceComparison>(cacheKey);
+    if (cached) return cached;
+
+    // Get all listings for this product
+    const listingsResult = await query(
+      `SELECT * FROM platform_listings
+       WHERE product_id = $1
+       ORDER BY total_effective_price ASC`,
+      [productId]
+    );
+
+    const listings: PlatformListing[] = listingsResult.rows.map(this.mapRowToListing);
+
+    // Get product info
+    const productResult = await query('SELECT name FROM products WHERE id = $1', [productId]);
+    const productName = productResult.rows[0]?.name || 'Unknown Product';
+
+    // Find lowest price
+    const lowestPrice = listings.length > 0
+      ? listings[0]
+      : this.createEmptyListing(productId);
+
+    // Get anti-manipulation results
+    const antiManipulation = await antiManipulationService.analyze(productId);
+
+    // Get recommendation
+    const recommendation = await recommendationService.getRecommendation(productId);
+
+    const comparison: PriceComparison = {
+      productId,
+      productName,
+      listings,
+      lowestPrice,
+      recommendation,
+      antiManipulation,
+      lastUpdated: new Date(),
+    };
+
+    await cacheSet(cacheKey, comparison, API_CONFIG.CACHE_TTL.PRICE_COMPARISON);
+    return comparison;
+  }
+
+  /**
+   * Record a new price observation
+   */
+  /**
+   * Append a `price_history` row after validation (used by workers/seed; no platform_listings upsert).
+   */
+  async appendPriceHistoryRecord(
+    productId: string,
+    platform: Platform,
+    price: number,
+    currency: string,
+    inStock: boolean,
+    recordedAt: Date,
+    discount?: number | null,
+    confidence?: number
+  ): Promise<boolean> {
+    const pricePoint: PricePoint = {
+      id: uuidv4(),
+      productId,
+      platform,
+      price,
+      currency,
+      inStock,
+      recordedAt,
+      confidence,
+    };
+    const validation = await dataValidator.validate(pricePoint, productId);
+    if (validation.quality === 'rejected') {
+      logger.warn(
+        `Price history rejected (${productId} / ${platform}): ${validation.reasons.join('; ')}`
+      );
+      return false;
+    }
+    const qualityDb = validation.quality === 'validated' ? 'validated' : 'suspicious';
+    await query(
+      `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at, quality)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        uuidv4(),
+        productId,
+        platform,
+        price,
+        currency,
+        discount ?? null,
+        inStock,
+        recordedAt.toISOString(),
+        qualityDb,
+      ]
+    );
+    logger.debug(
+      `Price history stored (${qualityDb}) normalizedUSD=${validation.normalizedPriceUSD.toFixed(2)}`
+    );
+    return true;
+  }
+
+  async recordPrice(
+    productId: string,
+    platform: Platform,
+    price: number,
+    shippingCost: number = 0,
+    discount?: number,
+    inStock: boolean = true,
+    url: string = '',
+    platformProductId: string = '',
+    deliveryEstimate?: string,
+    currency: string = 'USD',
+    confidence?: number
+  ): Promise<void> {
+    const totalEffectivePrice = price + shippingCost;
+
+    // Upsert platform listing
+    await query(
+      `INSERT INTO platform_listings
+       (id, product_id, platform, platform_product_id, url, current_price, shipping_cost, total_effective_price, currency, discount_percent, delivery_estimate, in_stock, last_updated)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $9, $10, $11, NOW())
+       ON CONFLICT (platform, platform_product_id) DO UPDATE SET
+         current_price = $6,
+         shipping_cost = $7,
+         total_effective_price = $8,
+         currency = $12,
+         discount_percent = $9,
+         delivery_estimate = $10,
+         in_stock = $11,
+         last_updated = NOW()`,
+      [
+        uuidv4(), productId, platform, platformProductId || `${platform}-${productId}`,
+        url, price, shippingCost, totalEffectivePrice,
+        discount ?? null, deliveryEstimate ?? null, inStock, currency
+      ]
+    );
+
+    // Get last price record to check if we should record a new one and for alert checking
+    const lastRecordResult = await query(
+      `SELECT price, recorded_at FROM price_history
+       WHERE product_id = $1 AND platform = $2
+       ORDER BY recorded_at DESC LIMIT 1`,
+      [productId, platform]
+    );
+
+    const lastEntry = lastRecordResult.rows[0];
+    const previousPrice = lastEntry?.price ? parseFloat(lastEntry.price) : price;
+
+    const priceChanged = !lastEntry || Math.abs(previousPrice - price) > 0.01;
+    const timePassed = lastEntry ? (Date.now() - new Date(lastEntry.recorded_at).getTime()) > HISTORY_CONFIG.RECORD_COOLDOWN_MS : true;
+
+    if (priceChanged || timePassed) {
+      const pricePoint: PricePoint = {
+        id: uuidv4(),
+        productId,
+        platform,
+        price,
+        currency,
+        inStock,
+        recordedAt: new Date(),
+        confidence,
+      };
+      const validation = await dataValidator.validate(pricePoint, productId);
+      if (validation.quality === 'rejected') {
+        logger.warn(
+          `Price record rejected (${productId} / ${platform}): ${validation.reasons.join('; ')}`
+        );
+        return;
+      }
+      const qualityDb = validation.quality === 'validated' ? 'validated' : 'suspicious';
+      await query(
+        `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at, quality)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)`,
+        [uuidv4(), productId, platform, price, currency, discount ?? null, inStock, qualityDb]
+      );
+      logger.debug(
+        `Price history recorded (${qualityDb}) normalizedUSD=${validation.normalizedPriceUSD.toFixed(2)}`
+      );
+    }
+
+    // Check for alerts
+    try {
+      await alertService.checkAlerts(productId, price, previousPrice, platform);
+    } catch (error) {
+      logger.error(`Error checking alerts for product ${productId}:`, error);
+    }
+
+    logger.info(`Price recorded: ${platform} - $${price} for product ${productId}`);
+  }
+
+  /**
+   * Get price history for a product
+   */
+  async getHistory(
+    productId: string,
+    platform?: Platform,
+    days: number = 90
+  ): Promise<PriceHistoryStats> {
+    const cacheKey = `history:${productId}:${platform || 'all'}:${days}`;
+    const cached = await cacheGet<PriceHistoryStats>(cacheKey);
+    if (cached) return cached;
+
+    let sql = `
+      SELECT * FROM price_history
+      WHERE product_id = $1
+        AND recorded_at >= NOW() - $2 * INTERVAL '1 day'
+    `;
+    const params: unknown[] = [productId, days];
+
+    if (platform) {
+      sql += ' AND platform = $3';
+      params.push(platform);
+    }
+
+    sql += ' ORDER BY recorded_at ASC';
+
+    const result = await query(sql, params);
+    const history: PriceHistoryEntry[] = result.rows.map(this.mapRowToHistory);
+
+    const prices = history.map(h => h.price);
+    const stats = this.calculateStats(prices, history);
+
+    await cacheSet(cacheKey, stats, API_CONFIG.CACHE_TTL.PRICE_HISTORY);
+    return stats;
+  }
+
+  /**
+   * Calculate price statistics
+   */
+  private calculateStats(prices: number[], history: PriceHistoryEntry[]): PriceHistoryStats {
+    if (prices.length === 0) {
+      return {
+        allTimeLow: 0,
+        allTimeHigh: 0,
+        averagePrice: 0,
+        volatilityIndex: ProductVolatility.STABLE,
+        standardDeviation: 0,
+        changeFrequency: 0,
+        priceHistory: history,
+      };
+    }
+
+    // Identify primary currency (most common in history)
+    const currencies = history.map(h => h.currency || 'USD');
+    const primaryCurrency = [...new Set(currencies)].sort((a, b) =>
+      currencies.filter(v => v === b).length - currencies.filter(v => v === a).length
+    )[0];
+
+    // Filter prices to only include primary currency to avoid skewed stats
+    const filteredPrices = history
+      .filter(h => (h.currency || 'USD') === primaryCurrency)
+      .map(h => h.price);
+
+    const effectivePrices = filteredPrices.length > 0 ? filteredPrices : prices;
+
+    const allTimeLow = Math.min(...effectivePrices);
+    const allTimeHigh = Math.max(...effectivePrices);
+    const averagePrice = effectivePrices.reduce((sum, p) => sum + p, 0) / effectivePrices.length;
+
+    // Standard deviation
+    const squaredDiffs = effectivePrices.map(p => Math.pow(p - averagePrice, 2));
+    const standardDeviation = Math.sqrt(squaredDiffs.reduce((sum, d) => sum + d, 0) / effectivePrices.length);
+
+    // Coefficient of variation (normalized std dev)
+    const cv = averagePrice > 0 ? standardDeviation / averagePrice : 0;
+
+    // Change frequency (how often price changes) - Filtered to primary currency
+    let changes = 0;
+    for (let i = 1; i < effectivePrices.length; i++) {
+      if (Math.abs(effectivePrices[i] - effectivePrices[i - 1]) > 0.01) {
+        changes++;
+      }
+    }
+    const changeFrequency = effectivePrices.length > 1 ? changes / (effectivePrices.length - 1) : 0;
+
+    // Volatility category
+    let volatilityIndex: ProductVolatility;
+    if (cv < PREDICTION_CONFIG.VOLATILITY_THRESHOLDS.STABLE) {
+        volatilityIndex = ProductVolatility.STABLE;
+    } else if (cv < PREDICTION_CONFIG.VOLATILITY_THRESHOLDS.MODERATE) {
+        volatilityIndex = ProductVolatility.MODERATE;
+    } else {
+        volatilityIndex = ProductVolatility.HIGHLY_VOLATILE;
+    }
+
+    return {
+      allTimeLow,
+      allTimeHigh,
+      averagePrice: Math.round(averagePrice * 100) / 100,
+      volatilityIndex,
+      standardDeviation: Math.round(standardDeviation * 100) / 100,
+      changeFrequency: Math.round(changeFrequency * 100) / 100,
+      priceHistory: history,
+    };
+  }
+
+  // ─── Mapping Helpers ─────────────────────────────────────────
+
+  private mapRowToListing(row: Record<string, unknown>): PlatformListing {
+    return {
+      id: row.id as string,
+      productId: row.product_id as string,
+      platform: row.platform as Platform,
+      platformProductId: row.platform_product_id as string,
+      url: row.url as string,
+      currentPrice: parseFloat(row.current_price as string),
+      shippingCost: parseFloat(row.shipping_cost as string) || 0,
+      totalEffectivePrice: parseFloat(row.total_effective_price as string),
+      currency: row.currency as string,
+      discountPercent: row.discount_percent ? parseFloat(row.discount_percent as string) : undefined,
+      deliveryEstimate: row.delivery_estimate as string | undefined,
+      inStock: row.in_stock as boolean,
+      lastUpdated: new Date(row.last_updated as string),
+    };
+  }
+
+  private mapRowToHistory(row: Record<string, unknown>): PriceHistoryEntry {
+    return {
+      id: row.id as string,
+      productId: row.product_id as string,
+      platform: row.platform as Platform,
+      price: parseFloat(row.price as string),
+      currency: (row.currency as string) || 'USD',
+      discount: row.discount ? parseFloat(row.discount as string) : undefined,
+      inStock: row.in_stock as boolean,
+      timestamp: new Date(row.recorded_at as string),
+    };
+  }
+
+  private createEmptyListing(productId: string): PlatformListing {
+    return {
+      id: '',
+      productId,
+      platform: Platform.AMAZON,
+      platformProductId: '',
+      url: '',
+      currentPrice: 0,
+      shippingCost: 0,
+      totalEffectivePrice: 0,
+      currency: 'USD',
+      inStock: false,
+      lastUpdated: new Date(),
+    };
+  }
+
+  /**
+   * Phase 1: build ML-ready features from stored history (read-only; no prediction model).
+   * Excludes rejected `price_history` rows; requires at least 2 points.
+   */
+  async buildFeatureVectorFromHistory(productId: string): Promise<FeatureVector | null> {
+    const ctx = await loadValidatedFeatureContext(productId);
+    return ctx?.featureVector ?? null;
+  }
+}
+
+export const priceAggregationService = new PriceAggregationService();
