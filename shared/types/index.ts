@@ -196,3 +196,5 @@ export interface ExtensionMessage {
   type: ExtensionMessageType;
   payload: unknown;
 }
+
+// Updated: 2025-03-04 - Update configuration guide
