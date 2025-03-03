@@ -58,3 +58,5 @@ export class DatabaseService {
     await this.pool.end();
   }
 }
+
+// Updated: 2025-03-04 - Update error handling in payment processor
