@@ -41,3 +41,5 @@ export const config = {
     level: process.env.LOG_LEVEL || 'debug',
   },
 };
+
+// Updated: 2025-03-06 - Fix duplicate records bug
