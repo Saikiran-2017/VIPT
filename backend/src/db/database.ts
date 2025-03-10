@@ -64,3 +64,5 @@ export class DatabaseService {
 // Updated: 2025-03-06 - Add snapshot tests
 
 // Updated: 2025-03-10 - Clean up test fixtures
+
+// Updated: 2025-03-11 - Add real-time notifications feature
