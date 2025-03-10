@@ -8,3 +8,5 @@
 // Updated: 2025-03-10 - Add unit tests for service layer
 
 // Updated: 2025-03-11 - Document database schema
+
+// Updated: 2025-03-11 - Add health check endpoint
