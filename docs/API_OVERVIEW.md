@@ -139,3 +139,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-03-08 - Fix input validation bug
 
 // Updated: 2025-03-09 - Improve test documentation
+
+// Updated: 2025-03-11 - Improve database transaction handling
