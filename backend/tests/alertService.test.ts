@@ -16,3 +16,5 @@
 // Updated: 2025-03-12 - Refactor database connection pooling
 
 // Updated: 2025-03-14 - Fix filter logic
+
+// Updated: 2025-03-14 - Update configuration guide
