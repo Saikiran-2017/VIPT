@@ -68,3 +68,5 @@ export class DatabaseService {
 // Updated: 2025-03-11 - Add real-time notifications feature
 
 // Updated: 2025-03-15 - Fix timezone handling
+
+// Updated: 2025-03-15 - Add mock data generators
