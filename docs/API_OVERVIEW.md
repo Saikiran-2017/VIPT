@@ -145,3 +145,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-03-11 - Improve database transaction handling
 
 // Updated: 2025-03-15 - Add FAQ section
+
+// Updated: 2025-03-15 - Add architecture diagrams
