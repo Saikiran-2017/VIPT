@@ -147,3 +147,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-03-15 - Add FAQ section
 
 // Updated: 2025-03-15 - Add architecture diagrams
+
+// Updated: 2025-03-15 - Add integration test suite
