@@ -20,3 +20,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-03-14 - Update dependencies
 
 // Updated: 2025-03-15 - Refactor service layer
+
+// Updated: 2025-03-19 - Add contributing guidelines
