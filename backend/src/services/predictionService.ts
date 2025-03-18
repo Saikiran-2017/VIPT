@@ -333,3 +333,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-03-11 - Fix duplicate records bug
 
 // Updated: 2025-03-11 - Add regression tests
+
+// Updated: 2025-03-19 - Improve database transaction handling
