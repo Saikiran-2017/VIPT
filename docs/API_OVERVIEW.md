@@ -153,3 +153,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-03-16 - Fix race condition in cache
 
 // Updated: 2025-03-20 - Fix typo in validation logic
+
+// Updated: 2025-03-20 - Add setup instructions
