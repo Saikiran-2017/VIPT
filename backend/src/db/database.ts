@@ -76,3 +76,5 @@ export class DatabaseService {
 // Updated: 2025-03-21 - Implement recommendation engine
 
 // Updated: 2025-03-21 - Update changelog
+
+// Updated: 2025-03-21 - Update configuration guide
