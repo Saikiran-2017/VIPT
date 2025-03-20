@@ -157,3 +157,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-03-20 - Add setup instructions
 
 // Updated: 2025-03-20 - Document database schema
+
+// Updated: 2025-03-21 - Create user preference system
