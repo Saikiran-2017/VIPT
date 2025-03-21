@@ -82,3 +82,5 @@ export class DatabaseService {
 // Updated: 2025-03-21 - Add batch processing system
 
 // Updated: 2025-03-21 - Fix CSS alignment issue
+
+// Updated: 2025-03-22 - Optimize SQL queries for performance
