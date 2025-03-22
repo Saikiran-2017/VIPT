@@ -204,3 +204,5 @@ export default router;
 // Updated: 2025-03-20 - Add integration test suite
 
 // Updated: 2025-03-23 - Add snapshot tests
+
+// Updated: 2025-03-23 - Fix filter logic
