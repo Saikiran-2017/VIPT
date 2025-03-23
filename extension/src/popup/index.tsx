@@ -26,3 +26,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-03-22 - Fix decimal precision issue
 
 // Updated: 2025-03-24 - Update error handling in payment processor
+
+// Updated: 2025-03-24 - Write troubleshooting guide
