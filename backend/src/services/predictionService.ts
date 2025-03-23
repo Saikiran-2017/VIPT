@@ -345,3 +345,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-03-24 - Add health check endpoint
 
 // Updated: 2025-03-24 - Add end-to-end tests
+
+// Updated: 2025-03-24 - Add setup instructions
