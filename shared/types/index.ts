@@ -216,3 +216,5 @@ export interface ExtensionMessage {
 // Updated: 2025-03-24 - Add health check endpoint
 
 // Updated: 2025-03-24 - Update error handling in payment processor
+
+// Updated: 2025-03-24 - Add health check endpoint
