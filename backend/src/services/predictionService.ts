@@ -341,3 +341,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-03-22 - Fix formatting in output
 
 // Updated: 2025-03-24 - Fix CSS alignment issue
+
+// Updated: 2025-03-24 - Add health check endpoint
