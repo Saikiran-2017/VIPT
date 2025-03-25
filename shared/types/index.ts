@@ -220,3 +220,5 @@ export interface ExtensionMessage {
 // Updated: 2025-03-24 - Add health check endpoint
 
 // Updated: 2025-03-26 - Fix input validation bug
+
+// Updated: 2025-03-26 - Fix formatting in output
