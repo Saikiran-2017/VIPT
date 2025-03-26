@@ -30,3 +30,5 @@
 // Updated: 2025-03-24 - Add mock data generators
 
 // Updated: 2025-03-26 - Fix decimal precision issue
+
+// Updated: 2025-03-27 - Update error handling in payment processor
