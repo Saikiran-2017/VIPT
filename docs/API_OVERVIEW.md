@@ -161,3 +161,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-03-21 - Create user preference system
 
 // Updated: 2025-03-21 - Fix decimal precision issue
+
+// Updated: 2025-03-27 - Write quick start guide
