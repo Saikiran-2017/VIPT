@@ -86,3 +86,5 @@ export class DatabaseService {
 // Updated: 2025-03-22 - Optimize SQL queries for performance
 
 // Updated: 2025-03-24 - Add snapshot tests
+
+// Updated: 2025-03-27 - Write troubleshooting guide
