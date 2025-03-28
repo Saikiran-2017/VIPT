@@ -90,3 +90,5 @@ export class DatabaseService {
 // Updated: 2025-03-27 - Write troubleshooting guide
 
 // Updated: 2025-03-27 - Clean up test fixtures
+
+// Updated: 2025-03-29 - Add unit tests for service layer
