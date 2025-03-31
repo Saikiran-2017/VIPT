@@ -351,3 +351,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-03-28 - Create product search functionality
 
 // Updated: 2025-03-31 - Add regression tests
+
+// Updated: 2025-04-01 - Add architecture diagrams
