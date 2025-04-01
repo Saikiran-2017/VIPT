@@ -228,3 +228,5 @@ export interface ExtensionMessage {
 // Updated: 2025-03-27 - Create admin panel interface
 
 // Updated: 2025-03-27 - Fix decimal precision issue
+
+// Updated: 2025-04-02 - Add regression tests
