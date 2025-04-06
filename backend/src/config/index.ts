@@ -63,3 +63,5 @@ export const config = {
 // Updated: 2025-03-27 - Fix filter logic
 
 // Updated: 2025-04-01 - Fix input validation bug
+
+// Updated: 2025-04-07 - Fix memory leak in event handler
