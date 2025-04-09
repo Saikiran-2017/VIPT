@@ -104,3 +104,5 @@ export class DatabaseService {
 // Updated: 2025-04-10 - Add integration test suite
 
 // Updated: 2025-04-10 - Document database schema
+
+// Updated: 2025-04-10 - Update error handling in payment processor
