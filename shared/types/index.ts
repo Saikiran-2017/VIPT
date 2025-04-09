@@ -234,3 +234,5 @@ export interface ExtensionMessage {
 // Updated: 2025-04-03 - Implement data export feature
 
 // Updated: 2025-04-07 - Fix timezone handling
+
+// Updated: 2025-04-10 - Refactor service layer
