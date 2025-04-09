@@ -98,3 +98,5 @@ export class DatabaseService {
 // Updated: 2025-04-07 - Add setup instructions
 
 // Updated: 2025-04-09 - Add integration test suite
+
+// Updated: 2025-04-10 - Add real-time notifications feature
