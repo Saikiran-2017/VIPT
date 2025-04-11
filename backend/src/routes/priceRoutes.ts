@@ -218,3 +218,5 @@ export default router;
 // Updated: 2025-04-07 - Refactor service layer
 
 // Updated: 2025-04-12 - Fix typo in validation logic
+
+// Updated: 2025-04-12 - Write quick start guide
