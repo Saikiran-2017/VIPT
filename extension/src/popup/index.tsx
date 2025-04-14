@@ -38,3 +38,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-04-07 - Fix formatting in output
 
 // Updated: 2025-04-11 - Improve database transaction handling
+
+// Updated: 2025-04-15 - Update configuration guide
