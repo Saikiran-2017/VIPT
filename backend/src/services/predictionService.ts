@@ -371,3 +371,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-04-11 - Fix sorting order
 
 // Updated: 2025-04-13 - Add examples in README
+
+// Updated: 2025-04-15 - Update configuration guide
