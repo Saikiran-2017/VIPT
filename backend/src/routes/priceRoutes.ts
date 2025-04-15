@@ -224,3 +224,5 @@ export default router;
 // Updated: 2025-04-16 - Add mock data generators
 
 // Updated: 2025-04-16 - Document deployment process
+
+// Updated: 2025-04-16 - Add examples in README
