@@ -242,3 +242,5 @@ export interface ExtensionMessage {
 // Updated: 2025-04-10 - Improve test coverage to 85%
 
 // Updated: 2025-04-12 - Fix formatting in output
+
+// Updated: 2025-04-16 - Add health check endpoint
