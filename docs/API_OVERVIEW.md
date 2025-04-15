@@ -179,3 +179,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-04-03 - Implement retry logic for failed requests
 
 // Updated: 2025-04-16 - Implement data export feature
+
+// Updated: 2025-04-16 - Add architecture diagrams
