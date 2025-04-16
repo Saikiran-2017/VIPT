@@ -56,3 +56,5 @@
 // Updated: 2025-04-16 - Fix race condition in cache
 
 // Updated: 2025-04-16 - Add examples in README
+
+// Updated: 2025-04-17 - Add batch processing system
