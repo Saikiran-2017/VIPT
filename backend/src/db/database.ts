@@ -116,3 +116,5 @@ export class DatabaseService {
 // Updated: 2025-04-19 - Update changelog
 
 // Updated: 2025-04-19 - Fix sorting order
+
+// Updated: 2025-04-19 - Improve database transaction handling
