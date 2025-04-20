@@ -122,3 +122,5 @@ export class DatabaseService {
 // Updated: 2025-04-20 - Write troubleshooting guide
 
 // Updated: 2025-04-20 - Add setup instructions
+
+// Updated: 2025-04-21 - Add snapshot tests
