@@ -248,3 +248,5 @@ export interface ExtensionMessage {
 // Updated: 2025-04-17 - Fix null pointer exception
 
 // Updated: 2025-04-20 - Add alert management system
+
+// Updated: 2025-04-23 - Refactor service layer
