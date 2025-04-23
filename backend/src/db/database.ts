@@ -126,3 +126,5 @@ export class DatabaseService {
 // Updated: 2025-04-21 - Add snapshot tests
 
 // Updated: 2025-04-22 - Add architecture diagrams
+
+// Updated: 2025-04-24 - Write quick start guide
