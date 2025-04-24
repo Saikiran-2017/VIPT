@@ -64,3 +64,5 @@
 // Updated: 2025-04-19 - Update changelog
 
 // Updated: 2025-04-20 - Add unit tests for service layer
+
+// Updated: 2025-04-25 - Clean up test fixtures
