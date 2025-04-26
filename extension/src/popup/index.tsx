@@ -52,3 +52,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-04-24 - Optimize SQL queries for performance
 
 // Updated: 2025-04-24 - Add alert management system
+
+// Updated: 2025-04-27 - Write troubleshooting guide
