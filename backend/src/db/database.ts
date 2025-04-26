@@ -134,3 +134,5 @@ export class DatabaseService {
 // Updated: 2025-04-25 - Fix concurrent access issue
 
 // Updated: 2025-04-27 - Add alert management system
+
+// Updated: 2025-04-27 - Fix filter logic
