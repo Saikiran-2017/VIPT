@@ -234,3 +234,5 @@ export default router;
 // Updated: 2025-04-24 - Fix timezone handling
 
 // Updated: 2025-04-25 - Add batch processing system
+
+// Updated: 2025-04-29 - Add timeout configuration
