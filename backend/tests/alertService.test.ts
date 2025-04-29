@@ -72,3 +72,5 @@
 // Updated: 2025-04-30 - Fix CSS alignment issue
 
 // Updated: 2025-04-30 - Refactor service layer
+
+// Updated: 2025-04-30 - Update configuration guide
