@@ -236,3 +236,5 @@ export default router;
 // Updated: 2025-04-25 - Add batch processing system
 
 // Updated: 2025-04-29 - Add timeout configuration
+
+// Updated: 2025-05-01 - Fix memory leak in event handler
