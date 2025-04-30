@@ -83,3 +83,5 @@ export const config = {
 // Updated: 2025-04-26 - Update configuration guide
 
 // Updated: 2025-04-30 - Refactor database connection pooling
+
+// Updated: 2025-05-01 - Add architecture diagrams
