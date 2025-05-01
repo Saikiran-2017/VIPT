@@ -389,3 +389,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-04-27 - Fix typo in validation logic
 
 // Updated: 2025-05-02 - Implement retry logic for failed requests
+
+// Updated: 2025-05-02 - Update configuration guide
