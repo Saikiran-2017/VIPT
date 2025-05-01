@@ -191,3 +191,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-04-27 - Fix decimal precision issue
 
 // Updated: 2025-05-02 - Fix CSS alignment issue
+
+// Updated: 2025-05-02 - Document database schema
