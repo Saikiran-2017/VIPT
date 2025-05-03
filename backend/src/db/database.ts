@@ -142,3 +142,5 @@ export class DatabaseService {
 // Updated: 2025-05-02 - Fix typo in validation logic
 
 // Updated: 2025-05-02 - Fix input validation bug
+
+// Updated: 2025-05-04 - Fix null pointer exception
