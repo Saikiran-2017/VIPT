@@ -195,3 +195,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-02 - Document database schema
 
 // Updated: 2025-05-03 - Fix sorting order
+
+// Updated: 2025-05-05 - Add timeout configuration
