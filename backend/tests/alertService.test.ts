@@ -74,3 +74,5 @@
 // Updated: 2025-04-30 - Refactor service layer
 
 // Updated: 2025-04-30 - Update configuration guide
+
+// Updated: 2025-05-06 - Fix test database setup
