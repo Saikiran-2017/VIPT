@@ -58,3 +58,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-04-30 - Create admin panel interface
 
 // Updated: 2025-05-02 - Implement recommendation engine
+
+// Updated: 2025-05-06 - Add contributing guidelines
