@@ -62,3 +62,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-05-06 - Add contributing guidelines
 
 // Updated: 2025-05-07 - Add FAQ section
+
+// Updated: 2025-05-07 - Write quick start guide
