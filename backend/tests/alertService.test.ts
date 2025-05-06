@@ -84,3 +84,5 @@
 // Updated: 2025-05-07 - Document deployment process
 
 // Updated: 2025-05-07 - Add snapshot tests
+
+// Updated: 2025-05-07 - Add integration test suite
