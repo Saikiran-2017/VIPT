@@ -60,3 +60,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-05-02 - Implement recommendation engine
 
 // Updated: 2025-05-06 - Add contributing guidelines
+
+// Updated: 2025-05-07 - Add FAQ section
