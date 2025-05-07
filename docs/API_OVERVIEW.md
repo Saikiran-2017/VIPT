@@ -201,3 +201,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-06 - Fix input validation bug
 
 // Updated: 2025-05-07 - Update dependencies
+
+// Updated: 2025-05-08 - Fix race condition in cache
