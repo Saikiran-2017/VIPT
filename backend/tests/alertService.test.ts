@@ -86,3 +86,5 @@
 // Updated: 2025-05-07 - Add snapshot tests
 
 // Updated: 2025-05-07 - Add integration test suite
+
+// Updated: 2025-05-08 - Clean up test fixtures
