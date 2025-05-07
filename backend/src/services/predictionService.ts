@@ -401,3 +401,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-05-07 - Fix date parsing issue
 
 // Updated: 2025-05-07 - Implement filtering and sorting
+
+// Updated: 2025-05-08 - Fix failing integration tests
