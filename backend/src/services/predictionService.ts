@@ -407,3 +407,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-05-08 - Add regression tests
 
 // Updated: 2025-05-08 - Implement retry logic for failed requests
+
+// Updated: 2025-05-09 - Add examples in README
