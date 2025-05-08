@@ -64,3 +64,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-05-07 - Add FAQ section
 
 // Updated: 2025-05-07 - Write quick start guide
+
+// Updated: 2025-05-09 - Add timeout configuration
