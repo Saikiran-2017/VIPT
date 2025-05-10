@@ -152,3 +152,5 @@ export class DatabaseService {
 // Updated: 2025-05-07 - Add end-to-end tests
 
 // Updated: 2025-05-11 - Add health check endpoint
+
+// Updated: 2025-05-11 - Refactor service layer
