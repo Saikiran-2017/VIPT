@@ -97,3 +97,5 @@ export const config = {
 // Updated: 2025-05-09 - Create product search functionality
 
 // Updated: 2025-05-11 - Implement retry logic for failed requests
+
+// Updated: 2025-05-12 - Add examples in README
