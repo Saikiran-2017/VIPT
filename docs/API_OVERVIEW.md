@@ -209,3 +209,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-08 - Add setup instructions
 
 // Updated: 2025-05-09 - Add regression tests
+
+// Updated: 2025-05-13 - Fix null pointer exception
