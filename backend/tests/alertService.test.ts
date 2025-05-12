@@ -96,3 +96,5 @@
 // Updated: 2025-05-11 - Add regression tests
 
 // Updated: 2025-05-12 - Fix input validation bug
+
+// Updated: 2025-05-13 - Add architecture diagrams
