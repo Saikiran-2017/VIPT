@@ -413,3 +413,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-05-09 - Improve test documentation
 
 // Updated: 2025-05-11 - Document database schema
+
+// Updated: 2025-05-13 - Fix test database setup
