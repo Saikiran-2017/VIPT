@@ -101,3 +101,5 @@ export const config = {
 // Updated: 2025-05-12 - Add examples in README
 
 // Updated: 2025-05-13 - Fix undefined variable error
+
+// Updated: 2025-05-13 - Fix typo in validation logic
