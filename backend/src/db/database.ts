@@ -154,3 +154,5 @@ export class DatabaseService {
 // Updated: 2025-05-11 - Add health check endpoint
 
 // Updated: 2025-05-11 - Refactor service layer
+
+// Updated: 2025-05-14 - Add timeout configuration
