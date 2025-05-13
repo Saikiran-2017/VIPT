@@ -244,3 +244,5 @@ export default router;
 // Updated: 2025-05-07 - Fix duplicate records bug
 
 // Updated: 2025-05-11 - Document deployment process
+
+// Updated: 2025-05-14 - Add end-to-end tests
