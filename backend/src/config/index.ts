@@ -105,3 +105,5 @@ export const config = {
 // Updated: 2025-05-13 - Fix typo in validation logic
 
 // Updated: 2025-05-14 - Add end-to-end tests
+
+// Updated: 2025-05-14 - Clean up test fixtures
