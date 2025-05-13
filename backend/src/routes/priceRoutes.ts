@@ -246,3 +246,5 @@ export default router;
 // Updated: 2025-05-11 - Document deployment process
 
 // Updated: 2025-05-14 - Add end-to-end tests
+
+// Updated: 2025-05-14 - Write troubleshooting guide
