@@ -104,3 +104,5 @@
 // Updated: 2025-05-14 - Create user preference system
 
 // Updated: 2025-05-14 - Add contributing guidelines
+
+// Updated: 2025-05-15 - Fix filter logic
