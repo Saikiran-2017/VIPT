@@ -106,3 +106,5 @@
 // Updated: 2025-05-14 - Add contributing guidelines
 
 // Updated: 2025-05-15 - Fix filter logic
+
+// Updated: 2025-05-15 - Add architecture diagrams
