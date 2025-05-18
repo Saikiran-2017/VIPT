@@ -221,3 +221,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-17 - Add snapshot tests
 
 // Updated: 2025-05-19 - Improve test documentation
+
+// Updated: 2025-05-19 - Fix duplicate records bug
