@@ -260,3 +260,5 @@ export interface ExtensionMessage {
 // Updated: 2025-05-14 - Add real-time notifications feature
 
 // Updated: 2025-05-16 - Fix failing integration tests
+
+// Updated: 2025-05-20 - Update changelog
