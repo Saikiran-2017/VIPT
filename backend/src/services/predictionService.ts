@@ -417,3 +417,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-05-13 - Fix test database setup
 
 // Updated: 2025-05-16 - Fix decimal precision issue
+
+// Updated: 2025-05-20 - Fix timezone handling
