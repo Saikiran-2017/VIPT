@@ -248,3 +248,5 @@ export default router;
 // Updated: 2025-05-14 - Add end-to-end tests
 
 // Updated: 2025-05-14 - Write troubleshooting guide
+
+// Updated: 2025-05-22 - Add end-to-end tests
