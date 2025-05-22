@@ -112,3 +112,5 @@
 // Updated: 2025-05-22 - Add setup instructions
 
 // Updated: 2025-05-23 - Document database schema
+
+// Updated: 2025-05-23 - Add timeout configuration
