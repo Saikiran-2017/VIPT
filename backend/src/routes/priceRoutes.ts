@@ -252,3 +252,5 @@ export default router;
 // Updated: 2025-05-22 - Add end-to-end tests
 
 // Updated: 2025-05-23 - Refactor database connection pooling
+
+// Updated: 2025-05-23 - Add examples in README
