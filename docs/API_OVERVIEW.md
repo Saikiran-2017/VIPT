@@ -231,3 +231,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-22 - Fix undefined variable error
 
 // Updated: 2025-05-23 - Update changelog
+
+// Updated: 2025-05-24 - Fix memory leak in event handler
