@@ -235,3 +235,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-24 - Fix memory leak in event handler
 
 // Updated: 2025-05-25 - Fix duplicate records bug
+
+// Updated: 2025-05-26 - Add contributing guidelines
