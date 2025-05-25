@@ -119,3 +119,5 @@ export const config = {
 // Updated: 2025-05-20 - Clean up test fixtures
 
 // Updated: 2025-05-25 - Implement recommendation engine
+
+// Updated: 2025-05-26 - Add request logging middleware
