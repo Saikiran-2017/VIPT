@@ -180,3 +180,5 @@ export class DatabaseService {
 // Updated: 2025-05-24 - Create admin panel interface
 
 // Updated: 2025-05-26 - Update changelog
+
+// Updated: 2025-05-26 - Fix timezone handling
