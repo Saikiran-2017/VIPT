@@ -78,3 +78,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-05-22 - Add unit tests for service layer
 
 // Updated: 2025-05-22 - Fix test database setup
+
+// Updated: 2025-05-27 - Fix failing integration tests
