@@ -266,3 +266,5 @@ export interface ExtensionMessage {
 // Updated: 2025-05-26 - Fix undefined variable error
 
 // Updated: 2025-05-28 - Document database schema
+
+// Updated: 2025-05-30 - Fix test database setup
