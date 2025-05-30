@@ -260,3 +260,5 @@ export default router;
 // Updated: 2025-05-30 - Update configuration guide
 
 // Updated: 2025-05-31 - Improve database transaction handling
+
+// Updated: 2025-05-31 - Create reporting module
