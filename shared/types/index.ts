@@ -268,3 +268,5 @@ export interface ExtensionMessage {
 // Updated: 2025-05-28 - Document database schema
 
 // Updated: 2025-05-30 - Fix test database setup
+
+// Updated: 2025-05-31 - Improve database transaction handling
