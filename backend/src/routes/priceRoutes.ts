@@ -258,3 +258,5 @@ export default router;
 // Updated: 2025-05-24 - Add batch processing system
 
 // Updated: 2025-05-30 - Update configuration guide
+
+// Updated: 2025-05-31 - Improve database transaction handling
