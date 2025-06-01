@@ -239,3 +239,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-05-26 - Add contributing guidelines
 
 // Updated: 2025-06-01 - Clean up test fixtures
+
+// Updated: 2025-06-02 - Add regression tests
