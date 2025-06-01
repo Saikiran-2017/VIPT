@@ -270,3 +270,5 @@ export interface ExtensionMessage {
 // Updated: 2025-05-30 - Fix test database setup
 
 // Updated: 2025-05-31 - Improve database transaction handling
+
+// Updated: 2025-06-02 - Refactor service layer
