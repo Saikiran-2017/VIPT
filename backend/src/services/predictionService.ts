@@ -425,3 +425,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-05-27 - Fix failing integration tests
 
 // Updated: 2025-06-02 - Fix CSS alignment issue
+
+// Updated: 2025-06-03 - Fix test database setup
