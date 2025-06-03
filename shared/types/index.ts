@@ -274,3 +274,5 @@ export interface ExtensionMessage {
 // Updated: 2025-06-02 - Refactor service layer
 
 // Updated: 2025-06-02 - Implement data export feature
+
+// Updated: 2025-06-04 - Document database schema
