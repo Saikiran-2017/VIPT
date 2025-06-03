@@ -243,3 +243,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-06-02 - Add regression tests
 
 // Updated: 2025-06-02 - Update error handling in payment processor
+
+// Updated: 2025-06-04 - Fix sorting order
