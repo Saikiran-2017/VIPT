@@ -184,3 +184,5 @@ export class DatabaseService {
 // Updated: 2025-05-26 - Fix timezone handling
 
 // Updated: 2025-06-02 - Add architecture diagrams
+
+// Updated: 2025-06-04 - Fix failing integration tests
