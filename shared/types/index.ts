@@ -276,3 +276,5 @@ export interface ExtensionMessage {
 // Updated: 2025-06-02 - Implement data export feature
 
 // Updated: 2025-06-04 - Document database schema
+
+// Updated: 2025-06-04 - Fix null pointer exception
