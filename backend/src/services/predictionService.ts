@@ -429,3 +429,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-06-03 - Fix test database setup
 
 // Updated: 2025-06-03 - Fix formatting in output
+
+// Updated: 2025-06-04 - Fix sorting order
