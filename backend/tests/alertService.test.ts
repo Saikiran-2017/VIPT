@@ -132,3 +132,5 @@
 // Updated: 2025-06-05 - Fix CSS alignment issue
 
 // Updated: 2025-06-07 - Add alert management system
+
+// Updated: 2025-06-08 - Improve test documentation
