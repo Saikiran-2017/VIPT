@@ -188,3 +188,5 @@ export class DatabaseService {
 // Updated: 2025-06-04 - Fix failing integration tests
 
 // Updated: 2025-06-04 - Fix date parsing issue
+
+// Updated: 2025-06-08 - Fix null pointer exception
