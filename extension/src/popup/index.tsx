@@ -90,3 +90,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-06-09 - Add real-time notifications feature
 
 // Updated: 2025-06-09 - Fix flaky tests
+
+// Updated: 2025-06-13 - Document deployment process
