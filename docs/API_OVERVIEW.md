@@ -247,3 +247,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-06-04 - Fix sorting order
 
 // Updated: 2025-06-06 - Fix failing integration tests
+
+// Updated: 2025-06-13 - Improve test documentation
