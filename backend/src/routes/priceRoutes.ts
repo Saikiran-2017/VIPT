@@ -274,3 +274,5 @@ export default router;
 // Updated: 2025-06-09 - Implement retry logic for failed requests
 
 // Updated: 2025-06-11 - Write troubleshooting guide
+
+// Updated: 2025-06-14 - Fix memory leak in event handler
