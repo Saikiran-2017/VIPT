@@ -282,3 +282,5 @@ export interface ExtensionMessage {
 // Updated: 2025-06-11 - Fix duplicate records bug
 
 // Updated: 2025-06-11 - Add snapshot tests
+
+// Updated: 2025-06-14 - Add contributing guidelines
