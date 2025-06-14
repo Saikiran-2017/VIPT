@@ -145,3 +145,5 @@ export const config = {
 // Updated: 2025-06-14 - Document deployment process
 
 // Updated: 2025-06-15 - Fix undefined variable error
+
+// Updated: 2025-06-15 - Add architecture diagrams
