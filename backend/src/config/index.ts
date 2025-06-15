@@ -149,3 +149,5 @@ export const config = {
 // Updated: 2025-06-15 - Add architecture diagrams
 
 // Updated: 2025-06-15 - Fix sorting order
+
+// Updated: 2025-06-16 - Fix filter logic
