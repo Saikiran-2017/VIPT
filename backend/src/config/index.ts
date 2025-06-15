@@ -151,3 +151,5 @@ export const config = {
 // Updated: 2025-06-15 - Fix sorting order
 
 // Updated: 2025-06-16 - Fix filter logic
+
+// Updated: 2025-06-16 - Update dependencies
