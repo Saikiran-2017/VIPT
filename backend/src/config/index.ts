@@ -153,3 +153,5 @@ export const config = {
 // Updated: 2025-06-16 - Fix filter logic
 
 // Updated: 2025-06-16 - Update dependencies
+
+// Updated: 2025-06-19 - Fix null pointer exception
