@@ -280,3 +280,5 @@ export default router;
 // Updated: 2025-06-15 - Improve database transaction handling
 
 // Updated: 2025-06-19 - Document deployment process
+
+// Updated: 2025-06-19 - Fix null pointer exception
