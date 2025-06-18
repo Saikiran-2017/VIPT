@@ -253,3 +253,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-06-14 - Fix failing integration tests
 
 // Updated: 2025-06-15 - Add architecture diagrams
+
+// Updated: 2025-06-19 - Implement data export feature
