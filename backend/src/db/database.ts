@@ -198,3 +198,5 @@ export class DatabaseService {
 // Updated: 2025-06-12 - Add snapshot tests
 
 // Updated: 2025-06-15 - Write troubleshooting guide
+
+// Updated: 2025-06-19 - Clean up test fixtures
