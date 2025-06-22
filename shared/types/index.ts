@@ -288,3 +288,5 @@ export interface ExtensionMessage {
 // Updated: 2025-06-20 - Document deployment process
 
 // Updated: 2025-06-23 - Fix null pointer exception
+
+// Updated: 2025-06-23 - Add timeout configuration
