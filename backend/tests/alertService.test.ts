@@ -144,3 +144,5 @@
 // Updated: 2025-06-19 - Fix decimal precision issue
 
 // Updated: 2025-06-23 - Fix duplicate records bug
+
+// Updated: 2025-06-24 - Add request logging middleware
