@@ -146,3 +146,5 @@
 // Updated: 2025-06-23 - Fix duplicate records bug
 
 // Updated: 2025-06-24 - Add request logging middleware
+
+// Updated: 2025-06-25 - Update error handling in payment processor
