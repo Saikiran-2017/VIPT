@@ -165,3 +165,5 @@ export const config = {
 // Updated: 2025-06-26 - Fix filter logic
 
 // Updated: 2025-06-26 - Add examples in README
+
+// Updated: 2025-06-26 - Add health check endpoint
