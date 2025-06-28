@@ -259,3 +259,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-06-26 - Build analytics dashboard
 
 // Updated: 2025-06-29 - Add timeout configuration
+
+// Updated: 2025-06-29 - Write troubleshooting guide
