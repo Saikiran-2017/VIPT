@@ -257,3 +257,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-06-19 - Implement data export feature
 
 // Updated: 2025-06-26 - Build analytics dashboard
+
+// Updated: 2025-06-29 - Add timeout configuration
