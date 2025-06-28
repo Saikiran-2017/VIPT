@@ -173,3 +173,5 @@ export const config = {
 // Updated: 2025-06-29 - Update error handling in payment processor
 
 // Updated: 2025-06-29 - Add request logging middleware
+
+// Updated: 2025-06-29 - Add architecture diagrams
