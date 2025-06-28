@@ -169,3 +169,5 @@ export const config = {
 // Updated: 2025-06-26 - Add health check endpoint
 
 // Updated: 2025-06-28 - Fix test database setup
+
+// Updated: 2025-06-29 - Update error handling in payment processor
