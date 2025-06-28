@@ -171,3 +171,5 @@ export const config = {
 // Updated: 2025-06-28 - Fix test database setup
 
 // Updated: 2025-06-29 - Update error handling in payment processor
+
+// Updated: 2025-06-29 - Add request logging middleware
