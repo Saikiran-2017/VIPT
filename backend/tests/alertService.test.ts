@@ -158,3 +158,5 @@
 // Updated: 2025-06-29 - Create reporting module
 
 // Updated: 2025-06-29 - Fix race condition in cache
+
+// Updated: 2025-06-30 - Add FAQ section
