@@ -286,3 +286,5 @@ export default router;
 // Updated: 2025-06-19 - Fix null pointer exception
 
 // Updated: 2025-06-27 - Clean up test fixtures
+
+// Updated: 2025-06-30 - Add regression tests
