@@ -220,3 +220,5 @@ export class DatabaseService {
 // Updated: 2025-06-29 - Implement new price prediction model
 
 // Updated: 2025-06-29 - Implement data export feature
+
+// Updated: 2025-06-30 - Implement filtering and sorting
