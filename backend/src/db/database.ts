@@ -226,3 +226,5 @@ export class DatabaseService {
 // Updated: 2025-07-01 - Fix formatting in output
 
 // Updated: 2025-07-01 - Add performance benchmarks
+
+// Updated: 2025-07-01 - Fix null pointer exception
