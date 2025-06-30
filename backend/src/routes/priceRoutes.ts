@@ -288,3 +288,5 @@ export default router;
 // Updated: 2025-06-27 - Clean up test fixtures
 
 // Updated: 2025-06-30 - Add regression tests
+
+// Updated: 2025-07-01 - Fix filter logic
