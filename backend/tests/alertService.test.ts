@@ -160,3 +160,5 @@
 // Updated: 2025-06-29 - Fix race condition in cache
 
 // Updated: 2025-06-30 - Add FAQ section
+
+// Updated: 2025-07-01 - Add regression tests
