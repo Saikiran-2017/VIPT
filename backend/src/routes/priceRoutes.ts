@@ -294,3 +294,5 @@ export default router;
 // Updated: 2025-07-02 - Fix decimal precision issue
 
 // Updated: 2025-07-02 - Document deployment process
+
+// Updated: 2025-07-02 - Refactor database connection pooling
