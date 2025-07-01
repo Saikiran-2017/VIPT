@@ -166,3 +166,5 @@
 // Updated: 2025-07-02 - Implement new price prediction model
 
 // Updated: 2025-07-02 - Implement new price prediction model
+
+// Updated: 2025-07-02 - Fix test database setup
