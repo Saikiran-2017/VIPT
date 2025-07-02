@@ -177,3 +177,5 @@ export const config = {
 // Updated: 2025-06-29 - Add architecture diagrams
 
 // Updated: 2025-06-30 - Add batch processing system
+
+// Updated: 2025-07-03 - Write troubleshooting guide
