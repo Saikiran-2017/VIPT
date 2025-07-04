@@ -271,3 +271,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-07-03 - Add architecture diagrams
 
 // Updated: 2025-07-03 - Write quick start guide
+
+// Updated: 2025-07-05 - Refactor database connection pooling
