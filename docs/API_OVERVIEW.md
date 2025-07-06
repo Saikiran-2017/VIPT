@@ -277,3 +277,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-07-05 - Update changelog
 
 // Updated: 2025-07-06 - Clean up test fixtures
+
+// Updated: 2025-07-07 - Fix failing integration tests
