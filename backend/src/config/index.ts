@@ -181,3 +181,5 @@ export const config = {
 // Updated: 2025-07-03 - Write troubleshooting guide
 
 // Updated: 2025-07-07 - Add snapshot tests
+
+// Updated: 2025-07-11 - Add health check endpoint
