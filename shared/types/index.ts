@@ -312,3 +312,5 @@ export interface ExtensionMessage {
 // Updated: 2025-07-08 - Fix decimal precision issue
 
 // Updated: 2025-07-12 - Add regression tests
+
+// Updated: 2025-07-12 - Improve database transaction handling
