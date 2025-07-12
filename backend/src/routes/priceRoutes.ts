@@ -302,3 +302,5 @@ export default router;
 // Updated: 2025-07-12 - Add mock data generators
 
 // Updated: 2025-07-12 - Fix date parsing issue
+
+// Updated: 2025-07-13 - Fix timezone handling
