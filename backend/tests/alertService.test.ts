@@ -170,3 +170,5 @@
 // Updated: 2025-07-02 - Fix test database setup
 
 // Updated: 2025-07-13 - Fix race condition in cache
+
+// Updated: 2025-07-15 - Clean up test fixtures
