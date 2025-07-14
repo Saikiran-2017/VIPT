@@ -306,3 +306,5 @@ export default router;
 // Updated: 2025-07-13 - Fix timezone handling
 
 // Updated: 2025-07-15 - Fix test database setup
+
+// Updated: 2025-07-15 - Create user preference system
