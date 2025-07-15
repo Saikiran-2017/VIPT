@@ -293,3 +293,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-07-12 - Clean up test fixtures
 
 // Updated: 2025-07-15 - Add alert management system
+
+// Updated: 2025-07-16 - Refactor service layer
