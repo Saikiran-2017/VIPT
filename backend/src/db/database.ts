@@ -240,3 +240,5 @@ export class DatabaseService {
 // Updated: 2025-07-13 - Refactor database connection pooling
 
 // Updated: 2025-07-16 - Create reporting module
+
+// Updated: 2025-07-16 - Fix memory leak in event handler
