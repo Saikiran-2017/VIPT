@@ -172,3 +172,5 @@
 // Updated: 2025-07-13 - Fix race condition in cache
 
 // Updated: 2025-07-15 - Clean up test fixtures
+
+// Updated: 2025-07-16 - Write quick start guide
