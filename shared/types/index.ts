@@ -320,3 +320,5 @@ export interface ExtensionMessage {
 // Updated: 2025-07-14 - Add regression tests
 
 // Updated: 2025-07-18 - Improve test documentation
+
+// Updated: 2025-07-18 - Document deployment process
