@@ -473,3 +473,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-07-16 - Implement new price prediction model
 
 // Updated: 2025-07-20 - Improve test coverage to 85%
+
+// Updated: 2025-07-20 - Add end-to-end tests
