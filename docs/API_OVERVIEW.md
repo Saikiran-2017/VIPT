@@ -303,3 +303,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-07-21 - Update changelog
 
 // Updated: 2025-07-21 - Add architecture diagrams
+
+// Updated: 2025-07-25 - Add integration test suite
