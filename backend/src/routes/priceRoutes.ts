@@ -320,3 +320,5 @@ export default router;
 // Updated: 2025-07-25 - Create product search functionality
 
 // Updated: 2025-07-25 - Refactor database connection pooling
+
+// Updated: 2025-07-27 - Fix failing integration tests
