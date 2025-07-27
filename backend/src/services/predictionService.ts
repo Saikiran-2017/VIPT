@@ -487,3 +487,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-07-26 - Add request logging middleware
 
 // Updated: 2025-07-27 - Fix formatting in output
+
+// Updated: 2025-07-28 - Add FAQ section
