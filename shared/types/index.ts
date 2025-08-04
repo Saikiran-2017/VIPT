@@ -336,3 +336,5 @@ export interface ExtensionMessage {
 // Updated: 2025-07-29 - Update configuration guide
 
 // Updated: 2025-08-05 - Fix flaky tests
+
+// Updated: 2025-08-05 - Add examples in README
