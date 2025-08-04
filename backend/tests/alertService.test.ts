@@ -186,3 +186,5 @@
 // Updated: 2025-07-25 - Add caching mechanism for price queries
 
 // Updated: 2025-08-05 - Clean up test fixtures
+
+// Updated: 2025-08-05 - Update dependencies
