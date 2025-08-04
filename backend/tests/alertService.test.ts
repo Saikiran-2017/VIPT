@@ -184,3 +184,5 @@
 // Updated: 2025-07-23 - Fix flaky tests
 
 // Updated: 2025-07-25 - Add caching mechanism for price queries
+
+// Updated: 2025-08-05 - Clean up test fixtures
