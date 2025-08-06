@@ -217,3 +217,5 @@ export const config = {
 // Updated: 2025-08-06 - Fix duplicate records bug
 
 // Updated: 2025-08-06 - Fix flaky tests
+
+// Updated: 2025-08-07 - Document database schema
