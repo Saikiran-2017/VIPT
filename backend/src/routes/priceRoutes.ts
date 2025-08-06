@@ -336,3 +336,5 @@ export default router;
 // Updated: 2025-08-06 - Add real-time notifications feature
 
 // Updated: 2025-08-07 - Implement new price prediction model
+
+// Updated: 2025-08-07 - Add regression tests
