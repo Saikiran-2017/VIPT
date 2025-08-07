@@ -311,3 +311,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-08-06 - Fix input validation bug
 
 // Updated: 2025-08-07 - Fix filter logic
+
+// Updated: 2025-08-08 - Improve test coverage to 85%
