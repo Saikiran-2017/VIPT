@@ -338,3 +338,5 @@ export interface ExtensionMessage {
 // Updated: 2025-08-05 - Fix flaky tests
 
 // Updated: 2025-08-05 - Add examples in README
+
+// Updated: 2025-08-08 - Add real-time notifications feature
