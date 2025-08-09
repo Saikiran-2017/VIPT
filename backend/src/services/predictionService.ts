@@ -511,3 +511,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-08-07 - Implement data export feature
 
 // Updated: 2025-08-10 - Fix undefined variable error
+
+// Updated: 2025-08-10 - Fix sorting order
