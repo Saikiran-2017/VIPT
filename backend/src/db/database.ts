@@ -258,3 +258,5 @@ export class DatabaseService {
 // Updated: 2025-08-07 - Create admin panel interface
 
 // Updated: 2025-08-09 - Fix failing integration tests
+
+// Updated: 2025-08-11 - Write troubleshooting guide
