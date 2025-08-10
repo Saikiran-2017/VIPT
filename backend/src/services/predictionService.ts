@@ -513,3 +513,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-08-10 - Fix undefined variable error
 
 // Updated: 2025-08-10 - Fix sorting order
+
+// Updated: 2025-08-11 - Document database schema
