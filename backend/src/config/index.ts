@@ -221,3 +221,5 @@ export const config = {
 // Updated: 2025-08-07 - Document database schema
 
 // Updated: 2025-08-07 - Add performance benchmarks
+
+// Updated: 2025-08-11 - Add examples in README
