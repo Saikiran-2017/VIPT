@@ -223,3 +223,5 @@ export const config = {
 // Updated: 2025-08-07 - Add performance benchmarks
 
 // Updated: 2025-08-11 - Add examples in README
+
+// Updated: 2025-08-13 - Add integration test suite
