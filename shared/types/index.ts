@@ -348,3 +348,5 @@ export interface ExtensionMessage {
 // Updated: 2025-08-14 - Fix test database setup
 
 // Updated: 2025-08-15 - Add snapshot tests
+
+// Updated: 2025-08-16 - Add FAQ section
