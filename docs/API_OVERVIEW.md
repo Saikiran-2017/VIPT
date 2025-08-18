@@ -317,3 +317,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-08-11 - Add integration test suite
 
 // Updated: 2025-08-15 - Create admin panel interface
+
+// Updated: 2025-08-19 - Add real-time notifications feature
