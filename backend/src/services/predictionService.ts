@@ -523,3 +523,5 @@ export const predictionService = new PredictionService();
 // Updated: 2025-08-19 - Fix formatting in output
 
 // Updated: 2025-08-19 - Add unit tests for service layer
+
+// Updated: 2025-08-19 - Update error handling in payment processor
