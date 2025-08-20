@@ -340,3 +340,5 @@ export default router;
 // Updated: 2025-08-07 - Add regression tests
 
 // Updated: 2025-08-19 - Add integration test suite
+
+// Updated: 2025-08-21 - Write troubleshooting guide
