@@ -329,3 +329,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-08-21 - Update changelog
 
 // Updated: 2025-08-23 - Improve test coverage to 85%
+
+// Updated: 2025-08-24 - Write quick start guide
