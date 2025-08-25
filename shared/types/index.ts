@@ -352,3 +352,5 @@ export interface ExtensionMessage {
 // Updated: 2025-08-16 - Add FAQ section
 
 // Updated: 2025-08-21 - Fix flaky tests
+
+// Updated: 2025-08-26 - Update API documentation
