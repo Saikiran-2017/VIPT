@@ -333,3 +333,5 @@ For architecture context, see [ARCHITECTURE.md](./ARCHITECTURE.md). For a script
 // Updated: 2025-08-24 - Write quick start guide
 
 // Updated: 2025-08-26 - Clean up test fixtures
+
+// Updated: 2025-08-27 - Add health check endpoint
