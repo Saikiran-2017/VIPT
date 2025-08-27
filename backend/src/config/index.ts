@@ -229,3 +229,5 @@ export const config = {
 // Updated: 2025-08-16 - Fix formatting in output
 
 // Updated: 2025-08-18 - Implement new price prediction model
+
+// Updated: 2025-08-28 - Add FAQ section
