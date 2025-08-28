@@ -176,3 +176,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Updated: 2025-08-25 - Write troubleshooting guide
 
 // Updated: 2025-08-26 - Fix date parsing issue
+
+// Updated: 2025-08-29 - Fix timezone handling
