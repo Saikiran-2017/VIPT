@@ -153,7 +153,7 @@ cd ../extension && npm install
 
 ```bash
 # Start PostgreSQL and Redis
-docker-compose up -d postgres redis
+docker compose up -d postgres redis
 ```
 
 ### 3. Configure Environment
@@ -170,6 +170,7 @@ cd backend
 npm run db:migrate    # Run database migrations
 npm run db:seed       # Seed demo data
 npm run dev           # Start dev server on :3000
+npm run test:e2e      # Run E2E verification
 ```
 
 ### 5. Build Extension
