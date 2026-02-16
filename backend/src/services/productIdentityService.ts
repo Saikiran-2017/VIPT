@@ -98,11 +98,13 @@ export class ProductIdentityService {
    * Extract model number from product title
    */
   extractModelNumber(title: string): string | undefined {
-    // Common patterns: XX-1234, ABC1234, XX1234-AB, MLPF3HN/A
+    // Common patterns: XX-1234, ABC1234, XX1234-AB, MLPF3HN/A, A1234, 123456789 (ISBN/UPC)
     const patterns = [
       /\b([A-Z]{2,}-?\d+[A-Z0-9]*(-[A-Z0-9]+)*(\/[A-Z0-9]+)?)\b/i,
       /\b([A-Z]+\d+[A-Z0-9]*(-[A-Z0-9]+)*(\/[A-Z0-9]+)?)\b/i,
       /\b(model\s*#?\s*:?\s*)([\w-]+)\b/i,
+      /\b([A-Z0-9]{8,13})\b/i, // ISBN-10, ISBN-13, or long SKU
+      /\b([A-Z]\d{4})\b/i,      // Apple style model numbers (e.g. A2172)
     ];
 
     for (const pattern of patterns) {
@@ -162,7 +164,7 @@ export class ProductIdentityService {
       result.rows.map((r: { name: string }) => r.name.toLowerCase())
     );
 
-    if (bestMatch.bestMatch.rating > 0.6) {
+    if (bestMatch.bestMatch.rating > 0.5) {
       return this.mapRowToProduct(result.rows[bestMatch.bestMatchIndex]);
     }
 
