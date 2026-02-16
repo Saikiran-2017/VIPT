@@ -256,7 +256,7 @@ export class PredictionService {
 
     return {
       productId,
-      currentPrice,
+      currentPrice: Math.round(currentPrice * 100) / 100,
       expectedPriceRange: { low: expectedLow, high: expectedHigh },
       dropProbability: Math.round(dropProbability * 100) / 100,
       suggestedWaitDays,
@@ -482,12 +482,16 @@ export class PredictionService {
     const prices = history.map(h => h.price);
     const currentPrice = prices.length > 0 ? prices[prices.length - 1] : 0;
 
+    // Round to 2 decimal places to avoid floating-point display issues
+    const expectedLow = Math.round(currentPrice * 0.9 * 100) / 100;
+    const expectedHigh = Math.round(currentPrice * 1.1 * 100) / 100;
+
     return {
       productId,
-      currentPrice,
+      currentPrice: Math.round(currentPrice * 100) / 100,
       expectedPriceRange: {
-        low: currentPrice * 0.9,
-        high: currentPrice * 1.1,
+        low: expectedLow,
+        high: expectedHigh,
       },
       dropProbability: 0.3,
       suggestedWaitDays: 7,
@@ -497,7 +501,7 @@ export class PredictionService {
         name: 'Insufficient Data',
         impact: 'neutral',
         weight: 1,
-        description: `Only ${history.length} data points available. Need ${PREDICTION_CONFIG.MIN_DATA_POINTS} for reliable prediction.`,
+        description: `Only ${history.length} data point${history.length !== 1 ? 's' : ''} available. Need ${PREDICTION_CONFIG.MIN_DATA_POINTS} for reliable prediction. Visit this product regularly to improve accuracy.`,
       }],
       generatedAt: new Date(),
     };

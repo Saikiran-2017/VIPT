@@ -153,14 +153,23 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // ─── Extension Install Handler ────────────────────────────────
 
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === 'install') {
-    console.log('VIPT installed');
-    // Generate a unique anonymous user ID
-    chrome.storage.local.set({
-      userId: crypto.randomUUID(),
-      installedAt: Date.now(),
-      tier: 'free',
-    });
-  }
+chrome.runtime.onInstalled.addListener(async (details) => {
+  console.log(`VIPT ${details.reason}`);
+  // Always ensure userId exists (install, update, or dev reload)
+  await ensureUserId();
 });
+
+// Also ensure userId on every service worker startup (in case storage was cleared)
+ensureUserId();
+
+async function ensureUserId(): Promise<void> {
+  const stored = await chrome.storage.local.get(['userId', 'installedAt', 'tier']);
+  if (!stored.userId) {
+    await chrome.storage.local.set({
+      userId: crypto.randomUUID(),
+      installedAt: stored.installedAt || Date.now(),
+      tier: stored.tier || 'free',
+    });
+    console.log('VIPT: Generated new anonymous userId');
+  }
+}

@@ -83,9 +83,21 @@ export default function PredictionPanel({ productId }: Props) {
 
   const dropPct = Math.round(prediction.dropProbability * 100);
   const confPct = Math.round(prediction.confidenceScore * 100);
+  const isLowConfidence = confPct < 50;
 
   return (
     <div className="p-3 space-y-3">
+      {/* Low confidence notice */}
+      {isLowConfidence && (
+        <div className="bg-yellow-900/20 border border-yellow-800/30 rounded-lg p-2.5">
+          <p className="text-[10px] text-yellow-400 font-medium">⚠️ Low prediction confidence ({confPct}%)</p>
+          <p className="text-[10px] text-yellow-400/70 mt-0.5">
+            Not enough price history data yet. Visit this product page regularly to improve prediction accuracy. 
+            Need at least 14 data points for reliable predictions.
+          </p>
+        </div>
+      )}
+
       {/* Drop Probability Gauge */}
       <div className="bg-[#1a1b23] rounded-lg p-4 border border-gray-800/50 text-center">
         <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Price Drop Probability</p>
@@ -121,7 +133,7 @@ export default function PredictionPanel({ productId }: Props) {
         <div className="flex items-center justify-between">
           <div className="text-center">
             <p className="text-xs text-gray-400">Low</p>
-            <p className="text-sm font-bold text-green-400">${prediction.expectedPriceRange.low}</p>
+            <p className="text-sm font-bold text-green-400">${prediction.expectedPriceRange.low.toFixed(2)}</p>
           </div>
 
           {/* Range visualization */}
@@ -150,11 +162,11 @@ export default function PredictionPanel({ productId }: Props) {
 
           <div className="text-center">
             <p className="text-xs text-gray-400">High</p>
-            <p className="text-sm font-bold text-red-400">${prediction.expectedPriceRange.high}</p>
+            <p className="text-sm font-bold text-red-400">${prediction.expectedPriceRange.high.toFixed(2)}</p>
           </div>
         </div>
         <p className="text-[10px] text-center text-gray-500 mt-1">
-          Current: ${prediction.currentPrice}
+          Current: ${prediction.currentPrice.toFixed(2)}
         </p>
       </div>
 

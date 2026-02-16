@@ -96,6 +96,11 @@ export default function PriceComparison({ productId }: Props) {
     );
   }
 
+  // Determine which platforms are tracked and which aren't
+  const allPlatforms = ['amazon', 'walmart', 'target', 'ebay', 'bestbuy', 'flipkart', 'newegg', 'aliexpress'];
+  const trackedPlatforms = data ? data.listings.map(l => l.platform) : [];
+  const untrackedPlatforms = allPlatforms.filter(p => !trackedPlatforms.includes(p));
+
   return (
     <div className="p-3 space-y-2">
       {/* Anti-manipulation warning */}
@@ -143,19 +148,19 @@ export default function PriceComparison({ productId }: Props) {
               </div>
               <div className="text-right">
                 <span className={`text-sm font-bold ${isLowest ? 'text-green-400' : 'text-white'}`}>
-                  ${listing.totalEffectivePrice.toLocaleString()}
+                  ${listing.totalEffectivePrice.toFixed(2)}
                 </span>
                 {listing.discountPercent && listing.discountPercent > 0 && (
                   <span className="text-[10px] text-green-500 ml-1">
-                    -{listing.discountPercent}%
+                    -{listing.discountPercent.toFixed(0)}%
                   </span>
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between mt-1.5 text-[10px] text-gray-500">
               <span>
-                Price: ${listing.currentPrice}
-                {listing.shippingCost > 0 && ` + $${listing.shippingCost} shipping`}
+                Price: ${listing.currentPrice.toFixed(2)}
+                {listing.shippingCost > 0 && ` + $${listing.shippingCost.toFixed(2)} shipping`}
                 {listing.shippingCost === 0 && ' • Free shipping'}
               </span>
               {listing.deliveryEstimate && (
@@ -166,9 +171,26 @@ export default function PriceComparison({ productId }: Props) {
         );
       })}
 
+      {/* Untracked platforms hint */}
+      {data.listings.length === 1 && (
+        <div className="bg-[#1a1b23] rounded-lg p-2.5 border border-gray-800/50">
+          <p className="text-[10px] text-gray-400 font-medium mb-1.5">📊 Track more platforms for comparison</p>
+          <div className="flex flex-wrap gap-1">
+            {untrackedPlatforms.slice(0, 5).map(p => (
+              <span key={p} className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-500 capitalize">
+                {p}
+              </span>
+            ))}
+          </div>
+          <p className="text-[9px] text-gray-600 mt-1.5">
+            Search for this product on other stores and open the VIPT extension to add their prices.
+          </p>
+        </div>
+      )}
+
       {/* Freshness indicator */}
       <div className="text-center text-[10px] text-gray-600 pt-1">
-        Last updated: {new Date().toLocaleTimeString()} • Data accuracy: &gt;95%
+        Last updated: {new Date().toLocaleTimeString()} • Tracking {trackedPlatforms.length} platform{trackedPlatforms.length !== 1 ? 's' : ''}
       </div>
     </div>
   );
