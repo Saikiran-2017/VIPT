@@ -173,8 +173,15 @@ export default function App() {
               <span className="text-gray-500">1.0.0</span>
             </div>
             <button
-              onClick={() => {
-                chrome.storage.local.clear();
+              onClick={async () => {
+                // Preserve userId when clearing cache
+                const stored = await chrome.storage.local.get(['userId', 'installedAt', 'tier']);
+                await chrome.storage.local.clear();
+                await chrome.storage.local.set({
+                  userId: stored.userId || crypto.randomUUID(),
+                  installedAt: stored.installedAt || Date.now(),
+                  tier: stored.tier || 'free',
+                });
                 setShowSettings(false);
                 loadCurrentProduct();
               }}

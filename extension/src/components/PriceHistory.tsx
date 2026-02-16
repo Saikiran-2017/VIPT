@@ -85,19 +85,34 @@ export default function PriceHistory({ productId }: Props) {
 
   const chartData = data.priceHistory.map((entry) => ({
     date: new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    fullDate: new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
     price: entry.price,
     platform: entry.platform,
   }));
+
+  const showDots = chartData.length <= 10; // Show dots when sparse data
 
   const vol = volatilityColors[data.volatilityIndex] || volatilityColors.stable;
 
   return (
     <div className="p-3 space-y-3">
+      {/* Sparse data notice */}
+      {data.priceHistory.length < 5 && (
+        <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg p-2.5">
+          <p className="text-[10px] text-blue-400 font-medium">Building price history...</p>
+          <p className="text-[10px] text-blue-400/70 mt-0.5">
+            {data.priceHistory.length} data point{data.priceHistory.length !== 1 ? 's' : ''} recorded. 
+            Visit this product regularly to build a comprehensive price chart. 
+            VIPT records prices each time you open the extension on a product page.
+          </p>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-4 gap-2">
-        <StatCard label="All-Time Low" value={`$${data.allTimeLow}`} color="text-green-400" />
-        <StatCard label="All-Time High" value={`$${data.allTimeHigh}`} color="text-red-400" />
-        <StatCard label="Average" value={`$${data.averagePrice}`} color="text-gray-300" />
+        <StatCard label="All-Time Low" value={`$${data.allTimeLow.toFixed(2)}`} color="text-green-400" />
+        <StatCard label="All-Time High" value={`$${data.allTimeHigh.toFixed(2)}`} color="text-red-400" />
+        <StatCard label="Average" value={`$${data.averagePrice.toFixed(2)}`} color="text-gray-300" />
         <div className={`rounded-lg p-2 text-center ${vol.bg}`}>
           <p className="text-[9px] text-gray-400">Volatility</p>
           <p className={`text-[11px] font-bold ${vol.text}`}>{vol.label}</p>
@@ -154,7 +169,11 @@ export default function PriceHistory({ productId }: Props) {
                 fontSize: '11px',
                 color: '#e4e5e7',
               }}
-              formatter={(value: number) => [`$${value}`, 'Price']}
+              formatter={(value: number) => [`$${Number(value).toFixed(2)}`, 'Price']}
+              labelFormatter={(label: string, payload: any[]) => {
+                if (payload?.[0]?.payload?.fullDate) return payload[0].payload.fullDate;
+                return label;
+              }}
             />
             <Area
               type="monotone"
@@ -162,7 +181,7 @@ export default function PriceHistory({ productId }: Props) {
               stroke="#4c6ef5"
               strokeWidth={2}
               fill="url(#priceGradient)"
-              dot={false}
+              dot={showDots ? { r: 4, fill: '#4c6ef5', stroke: '#fff', strokeWidth: 2 } : false}
               activeDot={{ r: 4, fill: '#4c6ef5', stroke: '#fff', strokeWidth: 2 }}
             />
           </AreaChart>
@@ -171,7 +190,7 @@ export default function PriceHistory({ productId }: Props) {
 
       {/* Average line indicator */}
       <div className="text-center text-[10px] text-gray-500">
-        Avg: ${data.averagePrice} • Std Dev: ±${data.standardDeviation}
+        Avg: ${data.averagePrice.toFixed(2)} • Std Dev: ±${data.standardDeviation.toFixed(2)} • {data.priceHistory.length} data point{data.priceHistory.length !== 1 ? 's' : ''}
       </div>
     </div>
   );
