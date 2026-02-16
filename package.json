@@ -1,0 +1,26 @@
+{
+  "name": "vayu-ai-price-tracker",
+  "version": "1.0.0",
+  "description": "Universal Price Intelligence Platform - Cross-platform shopping intelligence system",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "extension",
+    "shared"
+  ],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:extension": "cd extension && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:extension": "cd extension && npm run build",
+    "build": "npm run build:backend && npm run build:extension",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:seed": "cd backend && npm run db:seed",
+    "test": "cd backend && npm test",
+    "lint": "eslint . --ext .ts,.tsx",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  },
+  "author": "Vayu AI",
+  "license": "MIT"
+}

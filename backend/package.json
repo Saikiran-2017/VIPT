@@ -1,0 +1,52 @@
+{
+  "name": "@vayu/backend",
+  "version": "1.0.0",
+  "description": "Vayu AI Price Tracker - Backend API Services",
+  "main": "dist/backend/src/server.js",
+  "scripts": {
+    "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/server.ts",
+    "build": "tsc && tsc-alias",
+    "start": "node -r tsconfig-paths/register dist/backend/src/server.js",
+    "db:migrate": "ts-node -r tsconfig-paths/register src/models/migrate.ts",
+    "db:seed": "ts-node -r tsconfig-paths/register src/models/seed.ts",
+    "test": "jest --passWithNoTests"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
+    "pg": "^8.11.3",
+    "pg-pool": "^3.6.1",
+    "redis": "^4.6.12",
+    "uuid": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "express-rate-limit": "^7.1.5",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.5",
+    "fuse.js": "^7.0.0",
+    "string-similarity": "^4.0.4",
+    "zod": "^3.22.4",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/compression": "^1.7.5",
+    "@types/morgan": "^1.9.9",
+    "@types/pg": "^8.10.9",
+    "@types/uuid": "^9.0.7",
+    "@types/node": "^20.11.5",
+    "@types/node-cron": "^3.0.11",
+    "@types/string-similarity": "^4.0.2",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.11",
+    "ts-jest": "^29.1.2",
+    "tsconfig-paths": "^4.2.0",
+    "tsc-alias": "^1.8.8"
+  }
+}

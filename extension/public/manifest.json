@@ -1,0 +1,69 @@
+{
+  "manifest_version": 3,
+  "name": "VIPT - Vayu Intelligence Price Tracker",
+  "version": "1.0.0",
+  "description": "VIPT - Universal Price Intelligence. Compare prices, track history, predict drops & detect fake discounts across all major shopping platforms.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://www.amazon.com/*",
+    "https://www.amazon.in/*",
+    "https://www.amazon.co.uk/*",
+    "https://www.flipkart.com/*",
+    "https://www.walmart.com/*",
+    "https://www.ebay.com/*",
+    "https://www.bestbuy.com/*",
+    "https://www.target.com/*",
+    "https://www.newegg.com/*",
+    "https://www.aliexpress.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "VIPT - Vayu Intelligence Price Tracker"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.amazon.com/*",
+        "https://www.amazon.in/*",
+        "https://www.amazon.co.uk/*",
+        "https://www.flipkart.com/*",
+        "https://www.walmart.com/*",
+        "https://www.ebay.com/*",
+        "https://www.bestbuy.com/*",
+        "https://www.target.com/*",
+        "https://www.newegg.com/*",
+        "https://www.aliexpress.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
