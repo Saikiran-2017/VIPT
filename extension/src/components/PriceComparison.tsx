@@ -41,13 +41,24 @@ const platformColors: Record<string, string> = {
 export default function PriceComparison({ productId }: Props) {
   const [data, setData] = useState<ComparisonData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
     chrome.runtime.sendMessage(
       { type: 'GET_COMPARISON', payload: { productId } },
       (response) => {
-        if (response?.success && response.data) {
+        if (chrome.runtime.lastError) {
+          setError('Failed to connect to backend server.');
+        } else if (response?.success && response.data) {
           setData(response.data);
+        } else if (response?.error) {
+          setError(response.error);
         }
         setLoading(false);
       }
@@ -62,11 +73,25 @@ export default function PriceComparison({ productId }: Props) {
     );
   }
 
+  if (!productId) {
+    return (
+      <div className="p-6 text-center text-gray-500 text-sm">
+        <p>Connect the backend server to see price comparisons.</p>
+      </div>
+    );
+  }
+
   if (!data || data.listings.length === 0) {
     return (
       <div className="p-6 text-center text-gray-500 text-sm">
-        <p>No price comparisons available yet.</p>
-        <p className="text-xs mt-1">Browse this product on other platforms to build comparison data.</p>
+        {error ? (
+          <p className="text-red-400">{error}</p>
+        ) : (
+          <>
+            <p>No price comparisons available yet.</p>
+            <p className="text-xs mt-1">Browse this product on other platforms to build comparison data.</p>
+          </>
+        )}
       </div>
     );
   }

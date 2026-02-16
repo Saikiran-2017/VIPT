@@ -141,12 +141,15 @@ function extractAmazon(): DetectedProduct | null {
   }
 
   const brand = safeText('#bylineInfo') 
+    || safeText('#brand')
     || safeAttr('#bylineInfo', 'textContent')
     || undefined;
 
   const imageUrl = safeAttr('#landingImage', 'src') 
     || safeAttr('#imgBlkFront', 'src') 
     || safeAttr('#main-image', 'src')
+    || safeAttr('#imgTagWrapperId img', 'src')
+    || safeAttr('.imgTagWrapper img', 'src')
     || undefined;
 
   // Try to extract model number from detail table
@@ -179,18 +182,36 @@ function extractAmazon(): DetectedProduct | null {
 // ─── Flipkart Extractor ──────────────────────────────────────
 
 function extractFlipkart(): DetectedProduct | null {
-  const name = safeText('span.VU-ZEz') || safeText('h1.yhB1nd');
+  const name = safeText('span.VU-ZEz')
+    || safeText('h1.yhB1nd')
+    || safeText('span.B_NuCI')
+    || safeText('h1._9E25nV');
   if (!name) return null;
 
-  const priceText = safeText('div.Nx9bqj.CxhGGd') || safeText('div._30jeq3._16Jk6d');
+  const priceText = safeText('div.Nx9bqj.CxhGGd')
+    || safeText('div._30jeq3._16Jk6d')
+    || safeText('div._30jeq3')
+    || safeText('div.Nx9bqj');
   const priceData = priceText ? extractPrice(priceText) : null;
 
-  const brand = safeText('span.mEh187') || undefined;
-  const imageUrl = safeAttr('img._396cs4, img._2r_T1I', 'src') || undefined;
+  const brand = safeText('span.mEh187')
+    || safeText('span._2WkVRV')
+    || undefined;
+  const imageUrl = safeAttr('img._396cs4', 'src')
+    || safeAttr('img._2r_T1I', 'src')
+    || safeAttr('img.DByuf4', 'src')
+    || safeAttr('img._1Nyybr', 'src')
+    || undefined;
+
+  // Extract Flipkart product ID from URL
+  const skuMatch = window.location.pathname.match(/\/p\/(itm[a-z0-9]+)/i)
+    || window.location.search.match(/pid=([^&]+)/);
+  const sku = skuMatch?.[1];
 
   return {
     name,
     brand,
+    sku,
     currentPrice: priceData?.price || 0,
     currency: priceData?.currency || 'INR',
     platform: 'flipkart',
@@ -202,24 +223,83 @@ function extractFlipkart(): DetectedProduct | null {
 // ─── Walmart Extractor ───────────────────────────────────────
 
 function extractWalmart(): DetectedProduct | null {
-  const name = safeText('[itemprop="name"]') || safeText('h1.prod-ProductTitle');
+  // Multiple name selectors for different Walmart page layouts
+  const name = safeText('[data-testid="product-title"]')
+    || safeText('h1[itemprop="name"]')
+    || safeText('h1.prod-ProductTitle')
+    || safeText('h1.lh-copy')
+    || safeText('[itemprop="name"]')
+    || safeText('h1');
   if (!name) return null;
 
-  const priceText = safeText('[itemprop="price"]') || safeText('span.price-group');
-  const priceData = priceText ? extractPrice(priceText) : null;
+  let currentPrice = 0;
+  let currency = 'USD';
 
-  const brand = safeText('[itemprop="brand"]') || safeAttr('a.prod-brandName', 'textContent') || undefined;
-  const imageUrl = safeAttr('[data-testid="hero-image"] img, .prod-HeroImage img', 'src') || undefined;
+  // Strategy 1: itemprop price (structured data)
+  const itemPropPrice = safeAttr('[itemprop="price"]', 'content');
+  if (itemPropPrice) {
+    const p = parseFloat(itemPropPrice);
+    if (!isNaN(p) && p > 0) currentPrice = p;
+  }
 
-  const skuMatch = window.location.pathname.match(/\/(\d+)$/);
+  // Strategy 2: Various price selectors
+  if (currentPrice === 0) {
+    const priceSelectors = [
+      '[data-testid="price-wrap"] [itemprop="price"]',
+      'span[itemprop="price"]',
+      '[data-automation="buybox-price"]',
+      'span.price-group',
+      'span.price-characteristic',
+      '.price-main .visuallyhidden',
+      '[data-testid="price"]',
+      '.b_title .w_VaGa',
+    ];
+    for (const sel of priceSelectors) {
+      const text = safeText(sel);
+      if (text) {
+        const priceData = extractPrice(text);
+        if (priceData && priceData.price > 0) {
+          currentPrice = priceData.price;
+          currency = priceData.currency;
+          break;
+        }
+      }
+    }
+  }
+
+  // Strategy 3: Compose from whole + superscript parts
+  if (currentPrice === 0) {
+    const whole = safeText('span.price-characteristic');
+    const fraction = safeText('span.price-mantissa');
+    if (whole) {
+      const priceStr = `${whole.replace(/[,\s]/g, '')}.${fraction || '00'}`;
+      const p = parseFloat(priceStr);
+      if (!isNaN(p) && p > 0) currentPrice = p;
+    }
+  }
+
+  const brand = safeText('[itemprop="brand"]')
+    || safeText('[data-testid="product-brand"]')
+    || safeAttr('a.prod-brandName', 'textContent')
+    || undefined;
+
+  const imageUrl = safeAttr('[data-testid="hero-image-container"] img', 'src')
+    || safeAttr('[data-testid="hero-image"] img', 'src')
+    || safeAttr('.prod-HeroImage img', 'src')
+    || safeAttr('.hover-zoom-hero-image img', 'src')
+    || undefined;
+
+  // Extract Walmart item ID from URL
+  const skuMatch = window.location.pathname.match(/\/ip\/[^/]+\/?(\d+)/) 
+    || window.location.pathname.match(/\/(\d+)$/);
   const sku = skuMatch?.[1];
 
   return {
     name,
     brand,
     sku,
-    currentPrice: priceData?.price || 0,
-    currency: 'USD',
+    currentPrice,
+    currency,
     platform: 'walmart',
     url: window.location.href,
     imageUrl: imageUrl || undefined,
@@ -229,16 +309,32 @@ function extractWalmart(): DetectedProduct | null {
 // ─── eBay Extractor ──────────────────────────────────────────
 
 function extractEbay(): DetectedProduct | null {
-  const name = safeText('h1.x-item-title__mainTitle span') || safeText('#itemTitle');
+  const name = safeText('h1.x-item-title__mainTitle span')
+    || safeText('div.x-item-title span')
+    || safeText('#itemTitle')
+    || safeText('h1.product-title');
   if (!name) return null;
 
-  const priceText = safeText('.x-price-primary span') || safeText('#prcIsum');
+  const priceText = safeText('.x-price-primary span')
+    || safeText('.x-bin-price__content span.ux-textspans')
+    || safeText('#prcIsum')
+    || safeText('.display-price');
   const priceData = priceText ? extractPrice(priceText) : null;
 
-  const imageUrl = safeAttr('.ux-image-carousel-item img, #icImg', 'src') || undefined;
+  const brand = safeText('.x-item-condition-text .ux-textspans') || undefined;
+  const imageUrl = safeAttr('.ux-image-carousel-item img', 'src')
+    || safeAttr('#icImg', 'src')
+    || safeAttr('.ux-image-magnify__container img', 'src')
+    || undefined;
+
+  // Extract eBay item ID from URL
+  const skuMatch = window.location.pathname.match(/\/itm\/(\d+)/)
+    || window.location.pathname.match(/\/(\d+)\??/);
+  const sku = skuMatch?.[1];
 
   return {
     name,
+    sku,
     currentPrice: priceData?.price || 0,
     currency: priceData?.currency || 'USD',
     platform: 'ebay',
@@ -250,14 +346,16 @@ function extractEbay(): DetectedProduct | null {
 // ─── Best Buy Extractor ─────────────────────────────────────
 
 function extractBestBuy(): DetectedProduct | null {
-  const name = safeText('.sku-title h1') || safeText('h1.heading-5');
+  const name = safeText('.sku-title h1') || safeText('h1.heading-5') || safeText('[data-testid="heading"] h1');
   if (!name) return null;
 
-  const priceText = safeText('.priceView-hero-price span') || safeText('.priceView-customer-price span');
+  const priceText = safeText('.priceView-hero-price span')
+    || safeText('.priceView-customer-price span')
+    || safeText('[data-testid="customer-price"] span');
   const priceData = priceText ? extractPrice(priceText) : null;
 
-  const modelNumber = safeText('.sku-model .product-data-value');
-  const sku = safeText('.sku-value .product-data-value');
+  const modelNumber = safeText('.sku-model .product-data-value') || safeText('[data-testid="sku-model-value"]');
+  const sku = safeText('.sku-value .product-data-value') || safeText('[data-testid="sku-value"]');
   const imageUrl = safeAttr('.primary-image img, .shop-media-gallery img', 'src') || undefined;
 
   return {
@@ -267,6 +365,97 @@ function extractBestBuy(): DetectedProduct | null {
     currentPrice: priceData?.price || 0,
     currency: 'USD',
     platform: 'bestbuy',
+    url: window.location.href,
+    imageUrl: imageUrl || undefined,
+  };
+}
+
+// ─── Target Extractor ───────────────────────────────────────
+
+function extractTarget(): DetectedProduct | null {
+  const name = safeText('[data-test="product-title"]')
+    || safeText('h1[data-test="product-title"]')
+    || safeText('h1');
+  if (!name) return null;
+
+  const priceText = safeText('[data-test="product-price"]')
+    || safeText('.h-text-bs span');
+  const priceData = priceText ? extractPrice(priceText) : null;
+
+  const brand = safeText('[data-test="product-brand"]') || undefined;
+  const imageUrl = safeAttr('[data-test="product-image"] img', 'src')
+    || safeAttr('.slideDeckPicture img', 'src')
+    || undefined;
+
+  const skuMatch = window.location.pathname.match(/A-(\d+)/);
+  const sku = skuMatch?.[1];
+
+  return {
+    name,
+    brand,
+    sku,
+    currentPrice: priceData?.price || 0,
+    currency: 'USD',
+    platform: 'target',
+    url: window.location.href,
+    imageUrl: imageUrl || undefined,
+  };
+}
+
+// ─── Newegg Extractor ───────────────────────────────────────
+
+function extractNewegg(): DetectedProduct | null {
+  const name = safeText('.product-title') || safeText('h1.product-title');
+  if (!name) return null;
+
+  const priceText = safeText('.price-current')
+    || safeText('li.price-current');
+  const priceData = priceText ? extractPrice(priceText) : null;
+
+  const brand = safeText('.product-brand') || undefined;
+  const modelNumber = safeText('.product-model .product-info-value') || undefined;
+  const imageUrl = safeAttr('.product-view-img-original', 'src')
+    || safeAttr('.mainSlide img', 'src')
+    || undefined;
+
+  const skuMatch = window.location.pathname.match(/\/p\/([\w-]+)/);
+  const sku = skuMatch?.[1];
+
+  return {
+    name,
+    brand,
+    modelNumber,
+    sku,
+    currentPrice: priceData?.price || 0,
+    currency: 'USD',
+    platform: 'newegg',
+    url: window.location.href,
+    imageUrl: imageUrl || undefined,
+  };
+}
+
+// ─── AliExpress Extractor ───────────────────────────────────
+
+function extractAliExpress(): DetectedProduct | null {
+  const name = safeText('h1.product-title-text')
+    || safeText('h1[data-pl="product-title"]')
+    || safeText('.product-title');
+  if (!name) return null;
+
+  const priceText = safeText('.product-price-current')
+    || safeText('.uniform-banner-box-price')
+    || safeText('.es--wrap--erdmPRe .notranslate');
+  const priceData = priceText ? extractPrice(priceText) : null;
+
+  const imageUrl = safeAttr('.magnifier-image', 'src')
+    || safeAttr('.image-view-magnifier-wrap img', 'src')
+    || undefined;
+
+  return {
+    name,
+    currentPrice: priceData?.price || 0,
+    currency: priceData?.currency || 'USD',
+    platform: 'aliexpress',
     url: window.location.href,
     imageUrl: imageUrl || undefined,
   };
@@ -309,6 +498,9 @@ function detectProduct(): DetectedProduct | null {
     walmart: extractWalmart,
     ebay: extractEbay,
     bestbuy: extractBestBuy,
+    target: extractTarget,
+    newegg: extractNewegg,
+    aliexpress: extractAliExpress,
   };
 
   if (platform && extractors[platform]) {

@@ -30,9 +30,11 @@ export default function RecommendationBadge({ productId }: Props) {
   const [confidence, setConfidence] = useState(0);
 
   useEffect(() => {
+    if (!productId) return;
     chrome.runtime.sendMessage(
       { type: 'GET_RECOMMENDATION', payload: { productId } },
       (response) => {
+        if (chrome.runtime.lastError) return;
         if (response?.success && response.data) {
           setAction(response.data.action);
           setConfidence(response.data.confidence);

@@ -93,10 +93,14 @@ async function apiGet(endpoint: string): Promise<any> {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      return { success: false, error: body.error || `Server error (${response.status})` };
+    }
     return response.json();
   } catch (error) {
     console.error(`API GET ${endpoint} failed:`, error);
-    return { success: false, error: 'Network error' };
+    return { success: false, error: 'Cannot connect to backend server. Is it running on localhost:3000?' };
   }
 }
 
@@ -107,10 +111,14 @@ async function apiPost(endpoint: string, data: any): Promise<any> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      return { success: false, error: body.error || `Server error (${response.status})` };
+    }
     return response.json();
   } catch (error) {
     console.error(`API POST ${endpoint} failed:`, error);
-    return { success: false, error: 'Network error' };
+    return { success: false, error: 'Cannot connect to backend server. Is it running on localhost:3000?' };
   }
 }
 
@@ -120,10 +128,14 @@ async function apiDelete(endpoint: string): Promise<any> {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      return { success: false, error: body.error || `Server error (${response.status})` };
+    }
     return response.json();
   } catch (error) {
     console.error(`API DELETE ${endpoint} failed:`, error);
-    return { success: false, error: 'Network error' };
+    return { success: false, error: 'Cannot connect to backend server. Is it running on localhost:3000?' };
   }
 }
 
