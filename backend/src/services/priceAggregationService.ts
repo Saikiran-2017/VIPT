@@ -85,7 +85,8 @@ export class PriceAggregationService {
     inStock: boolean = true,
     url: string = '',
     platformProductId: string = '',
-    deliveryEstimate?: string
+    deliveryEstimate?: string,
+    currency: string = 'USD'
   ): Promise<void> {
     const totalEffectivePrice = price + shippingCost;
 
@@ -93,11 +94,12 @@ export class PriceAggregationService {
     await query(
       `INSERT INTO platform_listings
        (id, product_id, platform, platform_product_id, url, current_price, shipping_cost, total_effective_price, currency, discount_percent, delivery_estimate, in_stock, last_updated)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'USD', $9, $10, $11, NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $12, $9, $10, $11, NOW())
        ON CONFLICT (platform, platform_product_id) DO UPDATE SET
          current_price = $6,
          shipping_cost = $7,
          total_effective_price = $8,
+         currency = $12,
          discount_percent = $9,
          delivery_estimate = $10,
          in_stock = $11,
@@ -105,7 +107,7 @@ export class PriceAggregationService {
       [
         uuidv4(), productId, platform, platformProductId || `${platform}-${productId}`,
         url, price, shippingCost, totalEffectivePrice,
-        discount ?? null, deliveryEstimate ?? null, inStock,
+        discount ?? null, deliveryEstimate ?? null, inStock, currency
       ]
     );
 
@@ -120,9 +122,9 @@ export class PriceAggregationService {
 
     // Record in price history
     await query(
-      `INSERT INTO price_history (id, product_id, platform, price, discount, in_stock, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-      [uuidv4(), productId, platform, price, discount ?? null, inStock]
+      `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      [uuidv4(), productId, platform, price, currency, discount ?? null, inStock]
     );
 
     // Check for alerts
@@ -187,13 +189,26 @@ export class PriceAggregationService {
       };
     }
 
-    const allTimeLow = Math.min(...prices);
-    const allTimeHigh = Math.max(...prices);
-    const averagePrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+    // Identify primary currency (most common in history)
+    const currencies = history.map(h => h.currency || 'USD');
+    const primaryCurrency = [...new Set(currencies)].sort((a, b) =>
+      currencies.filter(v => v === b).length - currencies.filter(v => v === a).length
+    )[0];
+
+    // Filter prices to only include primary currency to avoid skewed stats
+    const filteredPrices = history
+      .filter(h => (h.currency || 'USD') === primaryCurrency)
+      .map(h => h.price);
+
+    const effectivePrices = filteredPrices.length > 0 ? filteredPrices : prices;
+
+    const allTimeLow = Math.min(...effectivePrices);
+    const allTimeHigh = Math.max(...effectivePrices);
+    const averagePrice = effectivePrices.reduce((sum, p) => sum + p, 0) / effectivePrices.length;
 
     // Standard deviation
-    const squaredDiffs = prices.map(p => Math.pow(p - averagePrice, 2));
-    const standardDeviation = Math.sqrt(squaredDiffs.reduce((sum, d) => sum + d, 0) / prices.length);
+    const squaredDiffs = effectivePrices.map(p => Math.pow(p - averagePrice, 2));
+    const standardDeviation = Math.sqrt(squaredDiffs.reduce((sum, d) => sum + d, 0) / effectivePrices.length);
 
     // Coefficient of variation (normalized std dev)
     const cv = averagePrice > 0 ? standardDeviation / averagePrice : 0;
@@ -254,6 +269,7 @@ export class PriceAggregationService {
       productId: row.product_id as string,
       platform: row.platform as Platform,
       price: parseFloat(row.price as string),
+      currency: (row.currency as string) || 'USD',
       discount: row.discount ? parseFloat(row.discount as string) : undefined,
       inStock: row.in_stock as boolean,
       timestamp: new Date(row.recorded_at as string),

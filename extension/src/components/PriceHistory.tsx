@@ -16,6 +16,7 @@ interface HistoryData {
   standardDeviation: number;
   priceHistory: {
     price: number;
+    currency: string;
     platform: string;
     timestamp: string;
   }[];
@@ -83,11 +84,19 @@ export default function PriceHistory({ productId }: Props) {
     );
   }
 
+  const currencySymbolMap: Record<string, string> = {
+    'USD': '$', 'INR': '₹', 'EUR': '€', 'GBP': '£'
+  };
+
+  const primaryCurrency = data.priceHistory[0]?.currency || 'USD';
+  const currencySymbol = currencySymbolMap[primaryCurrency] || '$';
+
   const chartData = data.priceHistory.map((entry) => ({
     date: new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     fullDate: new Date(entry.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
     price: entry.price,
     platform: entry.platform,
+    currency: entry.currency,
   }));
 
   const showDots = chartData.length <= 10; // Show dots when sparse data
@@ -110,9 +119,9 @@ export default function PriceHistory({ productId }: Props) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-4 gap-2">
-        <StatCard label="All-Time Low" value={`$${data.allTimeLow.toFixed(2)}`} color="text-green-400" />
-        <StatCard label="All-Time High" value={`$${data.allTimeHigh.toFixed(2)}`} color="text-red-400" />
-        <StatCard label="Average" value={`$${data.averagePrice.toFixed(2)}`} color="text-gray-300" />
+        <StatCard label="All-Time Low" value={`${currencySymbol}${data.allTimeLow.toFixed(2)}`} color="text-green-400" />
+        <StatCard label="All-Time High" value={`${currencySymbol}${data.allTimeHigh.toFixed(2)}`} color="text-red-400" />
+        <StatCard label="Average" value={`${currencySymbol}${data.averagePrice.toFixed(2)}`} color="text-gray-300" />
         <div className={`rounded-lg p-2 text-center ${vol.bg}`}>
           <p className="text-[9px] text-gray-400">Volatility</p>
           <p className={`text-[11px] font-bold ${vol.text}`}>{vol.label}</p>
@@ -159,7 +168,7 @@ export default function PriceHistory({ productId }: Props) {
               axisLine={{ stroke: '#2a2b35' }}
               tickLine={false}
               domain={['dataMin - 10', 'dataMax + 10']}
-              tickFormatter={(v) => `$${v}`}
+              tickFormatter={(v) => `${currencySymbol}${v}`}
             />
             <Tooltip
               contentStyle={{
@@ -169,7 +178,11 @@ export default function PriceHistory({ productId }: Props) {
                 fontSize: '11px',
                 color: '#e4e5e7',
               }}
-              formatter={(value: number) => [`$${Number(value).toFixed(2)}`, 'Price']}
+              formatter={(value: number, name: any, props: any) => {
+                const itemCurrency = props.payload.currency || primaryCurrency;
+                const itemSymbol = currencySymbolMap[itemCurrency] || currencySymbol;
+                return [`${itemSymbol}${Number(value).toFixed(2)}`, 'Price'];
+              }}
               labelFormatter={(label: string, payload: any[]) => {
                 if (payload?.[0]?.payload?.fullDate) return payload[0].payload.fullDate;
                 return label;
@@ -190,7 +203,7 @@ export default function PriceHistory({ productId }: Props) {
 
       {/* Average line indicator */}
       <div className="text-center text-[10px] text-gray-500">
-        Avg: ${data.averagePrice.toFixed(2)} • Std Dev: ±${data.standardDeviation.toFixed(2)} • {data.priceHistory.length} data point{data.priceHistory.length !== 1 ? 's' : ''}
+        Avg: {currencySymbol}{data.averagePrice.toFixed(2)} • Std Dev: ±{currencySymbol}{data.standardDeviation.toFixed(2)} • {data.priceHistory.length} data point{data.priceHistory.length !== 1 ? 's' : ''}
       </div>
     </div>
   );

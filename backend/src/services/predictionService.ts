@@ -38,6 +38,12 @@ export class PredictionService {
     // Fetch price history
     const history = await this.getHistoryData(productId, platform);
 
+    if (history.length < 5) {
+      const lowDataPred = this.createLowDataPrediction(productId, history);
+      lowDataPred.confidenceScore = 0.1;
+      return lowDataPred;
+    }
+
     if (history.length < PREDICTION_CONFIG.MIN_DATA_POINTS) {
       return this.createLowDataPrediction(productId, history);
     }
@@ -211,10 +217,15 @@ export class PredictionService {
     seasonal: ReturnType<typeof this.seasonalDecomposition>,
     eventFactor: Awaited<ReturnType<typeof this.getEventAdjustment>>
   ): PricePrediction {
-    // Weighted ensemble
-    const arimaWeight = 0.5;
+    // Weighted ensemble - dynamic weights based on events
+    let arimaWeight = 0.5;
     const seasonalWeight = 0.3;
-    const eventWeight = 0.2;
+    let eventWeight = 0.2;
+
+    if (eventFactor.nearestEventDays > 0 && eventFactor.nearestEventDays <= 7) {
+      eventWeight = 0.4;
+      arimaWeight = 0.3;
+    }
 
     let expectedLow = arima.expectedLow;
     let expectedHigh = arima.expectedHigh;
@@ -447,6 +458,7 @@ export class PredictionService {
       productId: row.product_id as string,
       platform: row.platform as Platform,
       price: parseFloat(row.price as string),
+      currency: (row.currency as string) || 'USD',
       discount: row.discount ? parseFloat(row.discount as string) : undefined,
       inStock: row.in_stock as boolean,
       timestamp: new Date(row.recorded_at as string),

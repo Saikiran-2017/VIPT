@@ -27,6 +27,8 @@ describe('ProductIdentityService', () => {
     it('should extract model numbers correctly', () => {
       expect(productIdentityService.extractModelNumber('Sony WH-1000XM5 Headphones')).toBe('WH-1000XM5');
       expect(productIdentityService.extractModelNumber('Apple iPhone 13 Pro (MLPF3HN/A)')).toBe('MLPF3HN/A');
+      expect(productIdentityService.extractModelNumber('Apple iPhone 12 A2172')).toBe('A2172');
+      expect(productIdentityService.extractModelNumber('Long SKU Product 1234567890')).toBe('1234567890');
     });
   });
 

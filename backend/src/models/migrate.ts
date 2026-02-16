@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS price_history (
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   platform VARCHAR(50) NOT NULL,
   price NUMERIC(12,2) NOT NULL,
+  currency VARCHAR(10) DEFAULT 'USD',
   discount NUMERIC(5,2),
   in_stock BOOLEAN DEFAULT true,
   recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

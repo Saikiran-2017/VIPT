@@ -35,13 +35,16 @@ function detectPlatform(): string | null {
 // ─── Price Extraction ──────────────────────────────────────────
 
 function extractPrice(text: string): { price: number; currency: string } | null {
+  // Cleanup text: remove non-breaking spaces and trim
+  const cleanText = text.replace(/\u00a0/g, ' ').trim();
+
   // Patterns: $99.99, ₹1,299, €49.95, £39.99
   const patterns = [
-    /[\$]\s*([\d,]+\.?\d*)/,
-    /[₹]\s*([\d,]+\.?\d*)/,
-    /[€]\s*([\d,]+\.?\d*)/,
-    /[£]\s*([\d,]+\.?\d*)/,
-    /([\d,]+\.?\d*)\s*(?:USD|INR|EUR|GBP)/i,
+    /[\$]\s*([\d,.]+)/,
+    /[₹]\s*([\d,.]+)/,
+    /[€]\s*([\d,.]+)/,
+    /[£]\s*([\d,.]+)/,
+    /([\d,.]+)\s*(?:USD|INR|EUR|GBP)/i,
   ];
 
   const currencyMap: Record<string, string> = {
@@ -49,12 +52,25 @@ function extractPrice(text: string): { price: number; currency: string } | null 
   };
 
   for (const pattern of patterns) {
-    const match = text.match(pattern);
+    const match = cleanText.match(pattern);
     if (match) {
-      const priceStr = match[1].replace(/,/g, '');
+      let priceStr = match[1];
+
+      // Handle European format (e.g., 1.299,00) vs US format (e.g., 1,299.00)
+      const lastComma = priceStr.lastIndexOf(',');
+      const lastDot = priceStr.lastIndexOf('.');
+
+      if (lastComma > lastDot) {
+        // European: Use comma for decimal, dots for thousands
+        priceStr = priceStr.replace(/\./g, '').replace(',', '.');
+      } else {
+        // US/Standard: Use dots for decimal, commas for thousands
+        priceStr = priceStr.replace(/,/g, '');
+      }
+
       const price = parseFloat(priceStr);
       if (!isNaN(price) && price > 0) {
-        const currencySymbol = text.match(/[\$₹€£]/)?.[0] || '$';
+        const currencySymbol = cleanText.match(/[\$₹€£]/)?.[0] || '$';
         return {
           price,
           currency: currencyMap[currencySymbol] || 'USD',
@@ -253,6 +269,8 @@ function extractWalmart(): DetectedProduct | null {
       '.price-main .visuallyhidden',
       '[data-testid="price"]',
       '.b_title .w_VaGa',
+      '[data-testid="price-and-shipping"]',
+      '.w_iUH7',
     ];
     for (const sel of priceSelectors) {
       const text = safeText(sel);
@@ -379,7 +397,8 @@ function extractTarget(): DetectedProduct | null {
   if (!name) return null;
 
   const priceText = safeText('[data-test="product-price"]')
-    || safeText('.h-text-bs span');
+    || safeText('.h-text-bs span')
+    || safeText('[data-test="@web/Price/StaticPrice"]');
   const priceData = priceText ? extractPrice(priceText) : null;
 
   const brand = safeText('[data-test="product-brand"]') || undefined;
