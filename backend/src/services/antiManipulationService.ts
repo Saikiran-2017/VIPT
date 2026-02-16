@@ -227,6 +227,7 @@ export class AntiManipulationService {
       productId: row.product_id as string,
       platform: row.platform as Platform,
       price: parseFloat(row.price as string),
+      currency: (row.currency as string) || 'USD',
       discount: row.discount ? parseFloat(row.discount as string) : undefined,
       inStock: row.in_stock as boolean,
       timestamp: new Date(row.recorded_at as string),

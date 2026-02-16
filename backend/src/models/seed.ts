@@ -68,9 +68,9 @@ async function seed(): Promise<void> {
       const price = Math.round((basePrice + variation) * 100) / 100;
 
       await query(
-        `INSERT INTO price_history (id, product_id, platform, price, in_stock, recorded_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [uuidv4(), demoProductId, platform, price, true, date.toISOString()]
+        `INSERT INTO price_history (id, product_id, platform, price, currency, in_stock, recorded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [uuidv4(), demoProductId, platform, price, 'USD', true, date.toISOString()]
       );
     }
   }

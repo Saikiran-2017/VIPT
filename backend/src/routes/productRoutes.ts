@@ -48,6 +48,8 @@ router.post(
           true, // in stock
           detection.url,
           detection.sku || detection.modelNumber || '',
+          undefined, // deliveryEstimate
+          detection.currency
         );
       }
 
