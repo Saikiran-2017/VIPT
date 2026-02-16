@@ -19,6 +19,12 @@ router.get(
         success: true,
         data: events,
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          confidencePercent: 100,
+        },
       });
     } catch (error) {
       next(error);
@@ -40,6 +46,12 @@ router.get(
         success: true,
         data: events,
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 60 * 60 * 1000),
+          confidencePercent: 100,
+        },
       });
     } catch (error) {
       next(error);
@@ -63,6 +75,12 @@ router.get(
         success: true,
         data: events,
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          confidencePercent: 100,
+        },
       });
     } catch (error) {
       next(error);
@@ -85,6 +103,12 @@ router.get(
         success: true,
         data: likelihood,
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 60 * 60 * 1000),
+          confidencePercent: 85,
+        },
       });
     } catch (error) {
       next(error);

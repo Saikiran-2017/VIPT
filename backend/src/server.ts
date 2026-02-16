@@ -10,6 +10,7 @@ import { logger } from './utils/logger';
 import { testConnection } from './models/database';
 import { initRedis } from './models/cache';
 import { runMigrations } from './models/migrate';
+import { startAlertWorker } from './workers/alertWorker';
 
 // Routes
 import productRoutes from './routes/productRoutes';
@@ -115,6 +116,9 @@ async function startServer(): Promise<void> {
       logger.warn('Redis connection failed - running without cache', err);
     }
 
+    // Start workers
+    startAlertWorker();
+
     // Start listening
     app.listen(config.server.port, () => {
       logger.info(`
@@ -134,6 +138,8 @@ async function startServer(): Promise<void> {
   }
 }
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 export default app;

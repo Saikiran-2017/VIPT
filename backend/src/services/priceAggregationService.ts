@@ -13,6 +13,7 @@ import { API_CONFIG, PREDICTION_CONFIG } from '@shared/constants';
 import { v4 as uuidv4 } from 'uuid';
 import { antiManipulationService } from './antiManipulationService';
 import { recommendationService } from './recommendationService';
+import { alertService } from './alertService';
 
 /**
  * Price Aggregation Service
@@ -108,12 +109,28 @@ export class PriceAggregationService {
       ]
     );
 
+    // Get previous price for alert checking
+    const prevPriceResult = await query(
+      `SELECT price FROM price_history
+       WHERE product_id = $1 AND platform = $2
+       ORDER BY recorded_at DESC LIMIT 1`,
+      [productId, platform]
+    );
+    const previousPrice = prevPriceResult.rows[0]?.price ? parseFloat(prevPriceResult.rows[0].price) : price;
+
     // Record in price history
     await query(
       `INSERT INTO price_history (id, product_id, platform, price, discount, in_stock, recorded_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
       [uuidv4(), productId, platform, price, discount ?? null, inStock]
     );
+
+    // Check for alerts
+    try {
+      await alertService.checkAlerts(productId, price, previousPrice, platform);
+    } catch (error) {
+      logger.error(`Error checking alerts for product ${productId}:`, error);
+    }
 
     logger.info(`Price recorded: ${platform} - $${price} for product ${productId}`);
   }

@@ -121,9 +121,11 @@ function extractAmazon(): DetectedProduct | null {
     const priceSelectors = [
       '#priceblock_ourprice', '#priceblock_dealprice',
       '#corePrice_feature_div .a-offscreen',
+      '#corePriceDisplay_desktop_feature_div .a-offscreen',
       '.priceToPay .a-offscreen',
       '#price_inside_buybox', '#newBuyBoxPrice',
       'span.a-color-price',
+      '.a-price.a-text-price .a-offscreen',
     ];
     for (const sel of priceSelectors) {
       const text = safeText(sel);

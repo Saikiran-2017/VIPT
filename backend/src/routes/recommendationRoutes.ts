@@ -22,6 +22,12 @@ router.get(
         success: true,
         data: analysis,
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 30 * 60 * 1000),
+          confidencePercent: Math.round(analysis.confidence * 100),
+        },
       });
     } catch (error) {
       next(error);
@@ -49,6 +55,12 @@ router.get(
         success: true,
         data: recommendation,
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 30 * 60 * 1000),
+          confidencePercent: Math.round(recommendation.confidence * 100),
+        },
       });
     } catch (error) {
       next(error);
