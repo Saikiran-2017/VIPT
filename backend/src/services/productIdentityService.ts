@@ -88,7 +88,7 @@ export class ProductIdentityService {
   normalizeTitle(title: string): string {
     return title
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '') // Remove special chars
+      .replace(/[^\w\s]/g, ' ') // Remove special chars including hyphens
       .replace(/\b(the|a|an|and|or|for|with|in|on|at|to|of)\b/g, '') // Remove stop words
       .replace(/\s+/g, ' ')
       .trim();
@@ -98,10 +98,10 @@ export class ProductIdentityService {
    * Extract model number from product title
    */
   extractModelNumber(title: string): string | undefined {
-    // Common patterns: XX-1234, ABC1234, XX1234-AB
+    // Common patterns: XX-1234, ABC1234, XX1234-AB, MLPF3HN/A
     const patterns = [
-      /\b([A-Z]{2,}-?\d{3,}[A-Z]*)\b/i,
-      /\b([A-Z]+\d+[A-Z]*[-/]?\d*)\b/i,
+      /\b([A-Z]{2,}-?\d+[A-Z0-9]*(-[A-Z0-9]+)*(\/[A-Z0-9]+)?)\b/i,
+      /\b([A-Z]+\d+[A-Z0-9]*(-[A-Z0-9]+)*(\/[A-Z0-9]+)?)\b/i,
       /\b(model\s*#?\s*:?\s*)([\w-]+)\b/i,
     ];
 

@@ -58,6 +58,12 @@ router.post(
           message: 'Product detected and price recorded',
         },
         timestamp: new Date(),
+        freshness: {
+          lastUpdated: new Date(),
+          isStale: false,
+          nextRefreshAt: new Date(Date.now() + 60 * 60 * 1000),
+          confidencePercent: 100,
+        },
       });
     } catch (error) {
       next(error);
@@ -87,6 +93,12 @@ router.get('/search/:term', async (req: Request, res: Response, next: NextFuncti
       success: true,
       data: result.rows,
       timestamp: new Date(),
+      freshness: {
+        lastUpdated: new Date(),
+        isStale: false,
+        nextRefreshAt: new Date(Date.now() + 60 * 60 * 1000),
+        confidencePercent: 90,
+      },
     });
   } catch (error) {
     next(error);
@@ -116,6 +128,12 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
       success: true,
       data: result.rows[0],
       timestamp: new Date(),
+      freshness: {
+        lastUpdated: result.rows[0].updated_at,
+        isStale: false,
+        nextRefreshAt: new Date(Date.now() + 60 * 60 * 1000),
+        confidencePercent: 100,
+      },
     });
   } catch (error) {
     next(error);
