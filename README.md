@@ -1,4 +1,4 @@
-# VIPT - Vayu Intelligence Price Tracker
+# VIPT - Virtual Intelligence Price Tracker
 
 **Universal Price Intelligence Platform**
 
