@@ -29,6 +29,7 @@ export default function App() {
   const [product, setProduct] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [backendConnected, setBackendConnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function App() {
   async function loadCurrentProduct() {
     setLoading(true);
     setError(null);
+    setBackendConnected(false);
 
     // Helper to send DETECT_PRODUCT message with timeout
     function tryDetect(tabId: number): Promise<any> {
@@ -57,8 +59,9 @@ export default function App() {
     try {
       // First try to get from storage (cached from content script)
       const stored = await chrome.storage.local.get('currentProduct');
-      if (stored.currentProduct && (Date.now() - (stored.currentProduct.timestamp || 0)) < 60000) {
+      if (stored.currentProduct && stored.currentProduct.id && (Date.now() - (stored.currentProduct.timestamp || 0)) < 60000) {
         setProduct(stored.currentProduct);
+        setBackendConnected(true);
         setLoading(false);
         return;
       }
@@ -126,6 +129,7 @@ export default function App() {
       });
 
       if (result?.data?.product) {
+        setBackendConnected(true);
         setProduct({
           ...result.data.product,
           detection: detected,
@@ -209,6 +213,15 @@ export default function App() {
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto">
+            {!product.id && (
+              <div className="p-4 mx-3 mt-3 bg-yellow-900/20 border border-yellow-800/30 rounded-lg">
+                <p className="text-xs font-medium text-yellow-400">Backend server not connected</p>
+                <p className="text-[10px] text-yellow-400/70 mt-1">
+                  Start the backend server to enable price comparison, history, predictions, and alerts.
+                  Run: <span className="font-mono bg-yellow-900/30 px-1 rounded">docker compose up -d</span> then <span className="font-mono bg-yellow-900/30 px-1 rounded">npm run dev</span> in /backend
+                </p>
+              </div>
+            )}
             {activeTab === 'compare' && <PriceComparison productId={product.id} />}
             {activeTab === 'history' && <PriceHistory productId={product.id} />}
             {activeTab === 'predict' && <PredictionPanel productId={product.id} />}

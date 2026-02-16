@@ -29,13 +29,24 @@ const impactIcons: Record<string, { icon: string; color: string }> = {
 export default function PredictionPanel({ productId }: Props) {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
     chrome.runtime.sendMessage(
       { type: 'GET_PREDICTION', payload: { productId } },
       (response) => {
-        if (response?.success && response.data) {
+        if (chrome.runtime.lastError) {
+          setError('Failed to connect to backend server.');
+        } else if (response?.success && response.data) {
           setPrediction(response.data);
+        } else if (response?.error) {
+          setError(response.error);
         }
         setLoading(false);
       }
@@ -50,10 +61,22 @@ export default function PredictionPanel({ productId }: Props) {
     );
   }
 
+  if (!productId) {
+    return (
+      <div className="p-6 text-center text-gray-500 text-sm">
+        Connect the backend server for AI predictions.
+      </div>
+    );
+  }
+
   if (!prediction) {
     return (
       <div className="p-6 text-center text-gray-500 text-sm">
-        Prediction not available. More price data needed.
+        {error ? (
+          <p className="text-red-400">{error}</p>
+        ) : (
+          'Prediction not available. More price data needed.'
+        )}
       </div>
     );
   }

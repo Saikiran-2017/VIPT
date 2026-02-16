@@ -20,6 +20,22 @@ import { v4 as uuidv4 } from 'uuid';
 export class AlertService {
 
   /**
+   * Ensure a user record exists for the given anonymous user ID.
+   * The extension generates a UUID on install but never registers it in the DB.
+   * This auto-creates a placeholder record so the FK constraint is satisfied.
+   */
+  private async ensureUser(userId: string): Promise<void> {
+    const existing = await query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (existing.rows.length === 0) {
+      await query(
+        `INSERT INTO users (id, email, tier) VALUES ($1, $2, 'free') ON CONFLICT (id) DO NOTHING`,
+        [userId, `anon_${userId}@vipt.local`]
+      );
+      logger.info(`Auto-created anonymous user: ${userId}`);
+    }
+  }
+
+  /**
    * Create a new price alert
    */
   async createAlert(
@@ -28,6 +44,9 @@ export class AlertService {
     type: AlertType,
     targetPrice?: number
   ): Promise<PriceAlert> {
+    // Ensure the anonymous user exists in the DB
+    await this.ensureUser(userId);
+
     const id = uuidv4();
 
     await query(

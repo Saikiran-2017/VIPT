@@ -30,15 +30,25 @@ const volatilityColors: Record<string, { bg: string; text: string; label: string
 export default function PriceHistory({ productId }: Props) {
   const [data, setData] = useState<HistoryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(90);
 
   useEffect(() => {
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setError(null);
     chrome.runtime.sendMessage(
       { type: 'GET_HISTORY', payload: { productId, days } },
       (response) => {
-        if (response?.success && response.data) {
+        if (chrome.runtime.lastError) {
+          setError('Failed to connect to backend server.');
+        } else if (response?.success && response.data) {
           setData(response.data);
+        } else if (response?.error) {
+          setError(response.error);
         }
         setLoading(false);
       }
@@ -53,10 +63,22 @@ export default function PriceHistory({ productId }: Props) {
     );
   }
 
+  if (!productId) {
+    return (
+      <div className="p-6 text-center text-gray-500 text-sm">
+        Connect the backend server to see price history.
+      </div>
+    );
+  }
+
   if (!data || data.priceHistory.length === 0) {
     return (
       <div className="p-6 text-center text-gray-500 text-sm">
-        No price history available yet.
+        {error ? (
+          <p className="text-red-400">{error}</p>
+        ) : (
+          'No price history available yet.'
+        )}
       </div>
     );
   }

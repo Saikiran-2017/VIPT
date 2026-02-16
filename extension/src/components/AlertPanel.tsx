@@ -26,8 +26,13 @@ export default function AlertPanel({ productId }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [alertType, setAlertType] = useState('target_price');
   const [targetPrice, setTargetPrice] = useState('');
+  const [createStatus, setCreateStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
+    if (!productId) {
+      setLoading(false);
+      return;
+    }
     loadAlerts();
   }, [productId]);
 
@@ -47,8 +52,22 @@ export default function AlertPanel({ productId }: Props) {
   }
 
   async function createAlert() {
+    if (!productId) {
+      setCreateStatus({ type: 'error', message: 'Backend server not connected. Cannot create alerts.' });
+      return;
+    }
+    if (alertType === 'target_price' && (!targetPrice || parseFloat(targetPrice) <= 0)) {
+      setCreateStatus({ type: 'error', message: 'Please enter a valid target price.' });
+      return;
+    }
+    setCreateStatus(null);
     const stored = await chrome.storage.local.get('userId');
     const userId = stored.userId;
+
+    if (!userId) {
+      setCreateStatus({ type: 'error', message: 'User ID not found. Try reinstalling the extension.' });
+      return;
+    }
 
     chrome.runtime.sendMessage(
       {
@@ -61,10 +80,18 @@ export default function AlertPanel({ productId }: Props) {
         },
       },
       (response) => {
+        if (chrome.runtime.lastError) {
+          setCreateStatus({ type: 'error', message: 'Failed to connect to server.' });
+          return;
+        }
         if (response?.success) {
+          setCreateStatus({ type: 'success', message: 'Alert created successfully!' });
           setShowCreate(false);
           setTargetPrice('');
           loadAlerts();
+          setTimeout(() => setCreateStatus(null), 3000);
+        } else {
+          setCreateStatus({ type: 'error', message: response?.error || 'Failed to create alert. Check backend server.' });
         }
       }
     );
@@ -92,8 +119,27 @@ export default function AlertPanel({ productId }: Props) {
     );
   }
 
+  if (!productId) {
+    return (
+      <div className="p-6 text-center text-gray-500 text-sm">
+        Connect the backend server to create and manage alerts.
+      </div>
+    );
+  }
+
   return (
     <div className="p-3 space-y-3">
+      {/* Status message */}
+      {createStatus && (
+        <div className={`p-2.5 rounded-lg text-xs font-medium ${
+          createStatus.type === 'success'
+            ? 'bg-green-900/20 border border-green-800/30 text-green-400'
+            : 'bg-red-900/20 border border-red-800/30 text-red-400'
+        }`}>
+          {createStatus.message}
+        </div>
+      )}
+
       {/* Create Alert Button */}
       <button
         onClick={() => setShowCreate(!showCreate)}
