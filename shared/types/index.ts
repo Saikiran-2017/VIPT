@@ -62,6 +62,7 @@ export interface PriceHistoryEntry {
   productId: string;
   platform: Platform;
   price: number;
+  currency: string;
   discount?: number;
   inStock: boolean;
   timestamp: Date;
