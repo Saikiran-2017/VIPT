@@ -96,7 +96,8 @@ CREATE TABLE IF NOT EXISTS alerts (
   target_price NUMERIC(12,2),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  triggered_at TIMESTAMP WITH TIME ZONE
+  triggered_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(user_id, product_id, alert_type)
 );
 
 CREATE INDEX IF NOT EXISTS idx_alerts_user ON alerts(user_id);
@@ -115,7 +116,8 @@ CREATE TABLE IF NOT EXISTS retail_events (
   expected_discount_max NUMERIC(5,2),
   categories TEXT[],
   is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(name, platform, start_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_dates ON retail_events(start_date, end_date);
