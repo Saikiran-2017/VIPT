@@ -27,6 +27,25 @@ interface ComparisonData {
   };
 }
 
+interface CrossPlatformResult {
+  platform: string;
+  platformName: string;
+  searchUrl: string;
+  scrapedPrice?: number;
+  scrapedProductName?: string;
+  currency?: string;
+  available: boolean;
+  method: 'scraped' | 'search_link';
+  confidence: number;
+}
+
+interface CrossPlatformData {
+  productName: string;
+  currentPlatform: string;
+  currentPrice: number;
+  results: CrossPlatformResult[];
+}
+
 const platformColors: Record<string, string> = {
   amazon: '#FF9900',
   flipkart: '#2874F0',
@@ -38,8 +57,20 @@ const platformColors: Record<string, string> = {
   aliexpress: '#E43225',
 };
 
+const platformIcons: Record<string, string> = {
+  amazon: '📦',
+  flipkart: '🛍️',
+  walmart: '🏬',
+  ebay: '🏷️',
+  bestbuy: '💻',
+  target: '🎯',
+  newegg: '🖥️',
+  aliexpress: '🌏',
+};
+
 export default function PriceComparison({ productId }: Props) {
   const [data, setData] = useState<ComparisonData | null>(null);
+  const [crossPlatform, setCrossPlatform] = useState<CrossPlatformData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +81,15 @@ export default function PriceComparison({ productId }: Props) {
     }
     setLoading(true);
     setError(null);
+
+    // Fetch both comparison and cross-platform data in parallel
+    let comparisonDone = false;
+    let crossPlatformDone = false;
+
+    const checkDone = () => {
+      if (comparisonDone && crossPlatformDone) setLoading(false);
+    };
+
     chrome.runtime.sendMessage(
       { type: 'GET_COMPARISON', payload: { productId } },
       (response) => {
@@ -60,7 +100,19 @@ export default function PriceComparison({ productId }: Props) {
         } else if (response?.error) {
           setError(response.error);
         }
-        setLoading(false);
+        comparisonDone = true;
+        checkDone();
+      }
+    );
+
+    chrome.runtime.sendMessage(
+      { type: 'GET_CROSS_PLATFORM', payload: { productId } },
+      (response) => {
+        if (!chrome.runtime.lastError && response?.success && response.data) {
+          setCrossPlatform(response.data);
+        }
+        crossPlatformDone = true;
+        checkDone();
       }
     );
   }, [productId]);
@@ -96,10 +148,21 @@ export default function PriceComparison({ productId }: Props) {
     );
   }
 
-  // Determine which platforms are tracked and which aren't
-  const allPlatforms = ['amazon', 'walmart', 'target', 'ebay', 'bestbuy', 'flipkart', 'newegg', 'aliexpress'];
-  const trackedPlatforms = data ? data.listings.map(l => l.platform) : [];
-  const untrackedPlatforms = allPlatforms.filter(p => !trackedPlatforms.includes(p));
+  // Combine tracked listings with cross-platform results
+  const trackedPlatforms = data.listings.map(l => l.platform);
+  const crossPlatformResults = crossPlatform?.results?.filter(
+    r => !trackedPlatforms.includes(r.platform)
+  ) || [];
+  const scrapedResults = crossPlatformResults.filter(r => r.method === 'scraped' && r.scrapedPrice);
+  const searchLinkResults = crossPlatformResults.filter(r => r.method === 'search_link' || !r.scrapedPrice);
+
+  // Find overall lowest price (including scraped cross-platform)
+  let overallLowest = data.lowestPrice.totalEffectivePrice;
+  scrapedResults.forEach(r => {
+    if (r.scrapedPrice && r.scrapedPrice < overallLowest) {
+      overallLowest = r.scrapedPrice;
+    }
+  });
 
   return (
     <div className="p-3 space-y-2">
@@ -116,24 +179,21 @@ export default function PriceComparison({ productId }: Props) {
         </div>
       )}
 
-      {/* Price listings */}
+      {/* Tracked platform listings */}
       {data.listings.map((listing, i) => {
-        const isLowest = listing.totalEffectivePrice === data.lowestPrice.totalEffectivePrice;
+        const isLowest = listing.totalEffectivePrice === overallLowest;
         const color = platformColors[listing.platform] || '#666';
 
         return (
           <div
-            key={i}
+            key={`tracked-${i}`}
             className={`rounded-lg p-3 transition-all cursor-pointer hover:bg-gray-800/80
               ${isLowest ? 'bg-vayu-900/20 border border-vayu-700/30' : 'bg-[#1a1b23] border border-gray-800/50'}`}
             onClick={() => listing.url && window.open(listing.url, '_blank')}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                 <span className="text-xs font-medium capitalize">{listing.platform}</span>
                 {isLowest && (
                   <span className="text-[9px] bg-green-900/40 text-green-400 px-1.5 py-0.5 rounded-full font-medium">
@@ -171,19 +231,82 @@ export default function PriceComparison({ productId }: Props) {
         );
       })}
 
-      {/* Untracked platforms hint */}
-      {data.listings.length === 1 && (
-        <div className="bg-[#1a1b23] rounded-lg p-2.5 border border-gray-800/50">
-          <p className="text-[10px] text-gray-400 font-medium mb-1.5">📊 Track more platforms for comparison</p>
-          <div className="flex flex-wrap gap-1">
-            {untrackedPlatforms.slice(0, 5).map(p => (
-              <span key={p} className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-500 capitalize">
-                {p}
-              </span>
-            ))}
+      {/* Cross-platform scraped prices */}
+      {scrapedResults.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 pt-1">
+            <div className="h-px bg-gray-800 flex-1" />
+            <span className="text-[9px] text-gray-500 uppercase tracking-wider">Other platforms</span>
+            <div className="h-px bg-gray-800 flex-1" />
           </div>
-          <p className="text-[9px] text-gray-600 mt-1.5">
-            Search for this product on other stores and open the VIPT extension to add their prices.
+          {scrapedResults.map((result, i) => {
+            const isLowest = result.scrapedPrice === overallLowest;
+            const color = platformColors[result.platform] || '#666';
+            const icon = platformIcons[result.platform] || '🛒';
+            const confPct = Math.round(result.confidence * 100);
+
+            return (
+              <div
+                key={`scraped-${i}`}
+                className={`rounded-lg p-3 transition-all cursor-pointer hover:bg-gray-800/80
+                  ${isLowest ? 'bg-green-900/10 border border-green-800/30' : 'bg-[#1a1b23] border border-gray-800/50'}`}
+                onClick={() => window.open(result.searchUrl, '_blank')}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{icon}</span>
+                    <span className="text-xs font-medium">{result.platformName}</span>
+                    {isLowest && (
+                      <span className="text-[9px] bg-green-900/40 text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                        LOWEST
+                      </span>
+                    )}
+                    <span className="text-[9px] bg-blue-900/30 text-blue-400 px-1 py-0.5 rounded">
+                      {confPct}% match
+                    </span>
+                  </div>
+                  <span className={`text-sm font-bold ${isLowest ? 'text-green-400' : 'text-white'}`}>
+                    ${result.scrapedPrice!.toFixed(2)}
+                  </span>
+                </div>
+                {result.scrapedProductName && (
+                  <p className="text-[10px] text-gray-500 mt-1 truncate">
+                    {result.scrapedProductName}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* Search links for platforms without scraped prices */}
+      {searchLinkResults.length > 0 && (
+        <div className="bg-[#1a1b23] rounded-lg p-2.5 border border-gray-800/50">
+          <p className="text-[10px] text-gray-400 font-medium mb-1.5">🔍 Search on other platforms</p>
+          <div className="flex flex-wrap gap-1.5">
+            {searchLinkResults.map((result, i) => {
+              const icon = platformIcons[result.platform] || '🛒';
+              return (
+                <button
+                  key={`link-${i}`}
+                  onClick={() => window.open(result.searchUrl, '_blank')}
+                  className="text-[10px] px-2 py-1 rounded-full bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all flex items-center gap-1"
+                >
+                  <span>{icon}</span>
+                  {result.platformName}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Savings tip */}
+      {overallLowest < data.lowestPrice.totalEffectivePrice && (
+        <div className="bg-green-900/15 border border-green-800/30 rounded-lg p-2.5">
+          <p className="text-[10px] text-green-400 font-medium">
+            💰 Save ${(data.lowestPrice.totalEffectivePrice - overallLowest).toFixed(2)} on another platform!
           </p>
         </div>
       )}
@@ -191,6 +314,7 @@ export default function PriceComparison({ productId }: Props) {
       {/* Freshness indicator */}
       <div className="text-center text-[10px] text-gray-600 pt-1">
         Last updated: {new Date().toLocaleTimeString()} • Tracking {trackedPlatforms.length} platform{trackedPlatforms.length !== 1 ? 's' : ''}
+        {scrapedResults.length > 0 && ` + ${scrapedResults.length} found`}
       </div>
     </div>
   );
