@@ -11,6 +11,7 @@ import { testConnection } from './models/database';
 import { initRedis } from './models/cache';
 import { runMigrations } from './models/migrate';
 import { startAlertWorker } from './workers/alertWorker';
+import { startPriceWorker } from './workers/priceWorker';
 
 // Routes
 import productRoutes from './routes/productRoutes';
@@ -118,6 +119,7 @@ async function startServer(): Promise<void> {
 
     // Start workers
     startAlertWorker();
+    startPriceWorker();
 
     // Start listening
     app.listen(config.server.port, () => {

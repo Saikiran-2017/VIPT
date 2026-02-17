@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { priceAggregationService } from '../services/priceAggregationService';
+import { crossPlatformService } from '../services/crossPlatformService';
 import { Platform } from '@shared/types';
+import { query } from '../models/database';
 
 const router = Router();
 
@@ -98,6 +100,53 @@ router.post(
       res.json({
         success: true,
         data: { message: 'Price recorded successfully' },
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/prices/cross-platform/:productId
+ * Get cross-platform price intelligence
+ */
+router.get(
+  '/cross-platform/:productId',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { productId } = req.params;
+
+      // Get product info
+      const productResult = await query(
+        `SELECT p.name, p.brand, p.model_number, pl.platform, pl.current_price
+         FROM products p
+         JOIN platform_listings pl ON p.id = pl.product_id
+         WHERE p.id = $1
+         ORDER BY pl.last_updated DESC
+         LIMIT 1`,
+        [productId]
+      );
+
+      if (productResult.rows.length === 0) {
+        res.status(404).json({ success: false, error: 'Product not found' });
+        return;
+      }
+
+      const product = productResult.rows[0];
+      const comparison = await crossPlatformService.getCrossPlatformPrices(
+        productId,
+        product.name,
+        product.platform,
+        parseFloat(product.current_price),
+        product.brand,
+        product.model_number
+      );
+
+      res.json({
+        success: true,
+        data: comparison,
         timestamp: new Date(),
       });
     } catch (error) {

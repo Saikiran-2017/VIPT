@@ -25,6 +25,9 @@ async function handleMessage(message: any, _sender: chrome.runtime.MessageSender
     case 'GET_COMPARISON':
       return apiGet(`/prices/compare/${message.payload.productId}`);
 
+    case 'GET_CROSS_PLATFORM':
+      return apiGet(`/prices/cross-platform/${message.payload.productId}`);
+
     case 'GET_HISTORY':
       return apiGet(`/prices/history/${message.payload.productId}?days=${message.payload.days || 90}`);
 
