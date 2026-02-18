@@ -187,6 +187,33 @@ export const PREDICTION_CONFIG = {
     STABLE: 0.05,
     MODERATE: 0.15,
   },
+  BASE_WEIGHTS: {
+    arima: 0.35,
+    holtWinters: 0.25,
+    elasticity: 0.15,
+    seasonal: 0.05,
+    event: 0.10,
+    crossPlatform: 0.10,
+  }
+};
+
+// ─── Scraping & Matching Configuration ────────────────────────────
+
+export const SCRAPING_CONFIG = {
+  BACKGROUND_COOLDOWN: 3600, // 1 hour
+  MIN_CONFIDENCE: 0.7,
+  TIMEOUT: 7000,
+  CONCURRENCY_LIMIT: 3,
+};
+
+export const MATCHING_CONFIG = {
+  FUZZY_THRESHOLD: 0.4,
+  SIMILARITY_THRESHOLD: 0.5,
+  MIN_SKU_LENGTH: 5,
+};
+
+export const HISTORY_CONFIG = {
+  RECORD_COOLDOWN_MS: 4 * 60 * 60 * 1000, // 4 hours
 };
 
 // ─── Anti-Manipulation Configuration ──────────────────────────────
