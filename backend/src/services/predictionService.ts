@@ -390,20 +390,22 @@ export class PredictionService {
     crossPlatform: Awaited<ReturnType<typeof this.getCrossPlatformPricingSignal>>,
     dataPoints: number
   ): PricePrediction {
-    // Dynamic model weights
+    // Dynamic model weights - Adjusted for better accuracy
     const weights = {
-      arima: 0.30,
+      arima: 0.35,
       holtWinters: 0.25,
       elasticity: 0.15,
-      seasonal: 0.10,
+      seasonal: 0.05,
       event: 0.10,
       crossPlatform: 0.10,
     };
 
-    if (eventFactor.nearestEventDays > 0 && eventFactor.nearestEventDays <= 7) {
-      weights.event = 0.30;
-      weights.arima = 0.20;
-      weights.holtWinters = 0.15;
+    // Increase event weight if a major sale is imminent
+    if (eventFactor.nearestEventDays > 0 && eventFactor.nearestEventDays <= 14) {
+      const proximityFactor = 1 - (eventFactor.nearestEventDays / 14);
+      weights.event = 0.10 + 0.30 * proximityFactor;
+      weights.arima -= 0.15 * proximityFactor;
+      weights.holtWinters -= 0.10 * proximityFactor;
     }
     if (crossPlatform.platformCount > 2) {
       weights.crossPlatform = 0.20;
@@ -510,16 +512,16 @@ export class PredictionService {
   ): number {
     let probability = 0;
 
-    // Base: price position in range
+    // Base: price position in range - Increased weight to 50%
     if (expectedLow < currentPrice) {
       const dropRange = currentPrice - expectedLow;
       const totalRange = expectedHigh - expectedLow;
-      probability = totalRange > 0 ? (dropRange / totalRange) * 0.4 : 0.2;
+      probability = totalRange > 0 ? (dropRange / totalRange) * 0.5 : 0.25;
     }
 
-    // Trend signal
-    if (trend === 'down') probability += 0.15;
-    else if (trend === 'up') probability -= 0.12;
+    // Trend signal - Weighted more heavily
+    if (trend === 'down') probability += 0.20;
+    else if (trend === 'up') probability -= 0.15;
 
     // RSI signal
     if (momentum.rsi > 70) probability += 0.15;
@@ -591,15 +593,15 @@ export class PredictionService {
 
     // Price Trend
     const trendDesc = arima.trend === 'down' 
-      ? `Price is trending downward (${(momentum.velocity * 100).toFixed(1)}%/week)` 
+      ? `AI detects a clear downward price trend of ${(Math.abs(momentum.velocity) * 100).toFixed(1)}% per week, suggesting a further drop is likely.`
       : arima.trend === 'up'
-        ? `Price is trending upward (+${(momentum.velocity * 100).toFixed(1)}%/week)`
-        : 'Price has been relatively stable recently';
+        ? `Price is showing upward momentum (+${(momentum.velocity * 100).toFixed(1)}%/week). Buying now might avoid further increases.`
+        : 'The price has stabilized at this level with no significant trend detected by AI models.';
     
     factors.push({
-      name: 'Price Trend',
+      name: 'AI Trend Analysis',
       impact: arima.trend === 'down' ? 'positive' : arima.trend === 'up' ? 'negative' : 'neutral',
-      weight: 0.25,
+      weight: 0.30,
       description: trendDesc,
     });
 

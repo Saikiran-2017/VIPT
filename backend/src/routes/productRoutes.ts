@@ -51,6 +51,36 @@ router.post(
           undefined, // deliveryEstimate
           detection.currency
         );
+
+        // Background: Try to fetch and record prices from other platforms to build history faster
+        // We don't await this to keep the response fast
+        import('../services/crossPlatformService').then(({ crossPlatformService }) => {
+          crossPlatformService.getCrossPlatformPrices(
+            product.id,
+            product.name,
+            detection.platform,
+            detection.currentPrice,
+            product.brand,
+            product.modelNumber
+          ).then(comparison => {
+            comparison.results.forEach(result => {
+              if (result.method === 'scraped' && result.scrapedPrice && result.confidence > 0.7) {
+                priceAggregationService.recordPrice(
+                  product.id,
+                  result.platform as any,
+                  result.scrapedPrice,
+                  0,
+                  undefined,
+                  true,
+                  result.searchUrl,
+                  '',
+                  undefined,
+                  result.currency || 'USD'
+                ).catch(err => {});
+              }
+            });
+          }).catch(err => {});
+        });
       }
 
       res.json({

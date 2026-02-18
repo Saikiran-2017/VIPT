@@ -122,15 +122,18 @@ export class CrossPlatformService {
    * Build an optimized search query from product info
    */
   private buildSearchQuery(name: string, brand?: string, modelNumber?: string): string {
-    // If we have brand + model, that's the best search query
-    if (brand && modelNumber) {
-      return `${brand} ${modelNumber}`.trim();
+    // If we have a model number, it's the most specific identifier
+    if (modelNumber && modelNumber.length > 3) {
+      // Sometimes just model number is enough, but adding brand helps narrow it down
+      return brand ? `${brand} ${modelNumber}` : modelNumber;
     }
 
     // Clean up the product name for better search results
     let query = name
       // Remove common filler words that hurt search
-      .replace(/\b(with|and|for|the|a|an|in|on|to|by|of)\b/gi, ' ')
+      .replace(/\b(with|and|for|the|a|an|in|on|to|by|of|newest|latest|version)\b/gi, ' ')
+      // Remove promotional text in brackets
+      .replace(/\[.*?\]|\(.*?\)/g, '')
       // Remove special chars except hyphens
       .replace(/[™®©]/g, '')
       // Remove size/quantity descriptors at the end
@@ -139,9 +142,10 @@ export class CrossPlatformService {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Truncate to first ~60 chars at word boundary for better search
-    if (query.length > 60) {
-      query = query.substring(0, 60).replace(/\s+\S*$/, '');
+    // If query is still very long, take the first 4-5 significant words
+    const words = query.split(' ');
+    if (words.length > 6) {
+      query = words.slice(0, 6).join(' ');
     }
 
     return query;
@@ -198,13 +202,23 @@ export class CrossPlatformService {
   ): Promise<{ price: number; name: string; currency?: string; confidence: number } | null> {
     try {
       const response = await axios.get(searchUrl, {
-        timeout: 5000,
+        timeout: 7000,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'max-age=0',
+          'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
         },
-        maxRedirects: 3,
+        maxRedirects: 5,
       });
 
       if (response.status !== 200) return null;
@@ -225,31 +239,56 @@ export class CrossPlatformService {
     productName: string,
     referencePrice: number
   ): { price: number; name: string; currency?: string; confidence: number } | null {
-    const extractors: Record<string, () => { price: number; name: string; confidence: number } | null> = {
+    const extractors: Record<string, () => { price: number; name: string; currency?: string; confidence: number } | null> = {
+      amazon: () => {
+        const item = $('div[data-component-type="s-search-result"]').first();
+        const priceText = item.find('.a-price .a-offscreen').first().text() ||
+                          item.find('.a-color-price').first().text();
+        const nameText = item.find('h2 a span').first().text();
+        return this.parseResult(priceText, nameText, productName, referencePrice);
+      },
+      flipkart: () => {
+        const item = $('div._1AtVbE, div.tAoY82, div._75_93D').first();
+        const priceText = item.find('div._30jeq3, div.Nx9bqj').first().text();
+        const nameText = item.find('a.IRpw9B, div._4rR01T, a.w_V_S_').first().text() ||
+                         item.find('a.s1Q9rs').first().text();
+        const result = this.parseResult(priceText, nameText, productName, referencePrice);
+        if (result) result.currency = 'INR';
+        return result;
+      },
       walmart: () => {
-        const items = $('[data-item-id]').first();
+        const items = $('[data-item-id], .w-percent-100').first();
         const priceText = items.find('[data-automation-id="product-price"] .f2').text() ||
-                          items.find('.sans-serif.lh-title').first().text();
+                          items.find('.sans-serif.lh-title').first().text() ||
+                          items.find('[data-testid="price"]').text();
         const nameText = items.find('[data-automation-id="product-title"]').text() ||
-                         items.find('span.w_iUH7').text();
+                         items.find('span.w_iUH7').text() ||
+                         items.find('[data-testid="product-title"]').text();
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
       target: () => {
-        const item = $('[data-test="@web/site-top-of-funnel/ProductCardWrapper"]').first();
+        const item = $('[data-test="@web/site-top-of-funnel/ProductCardWrapper"], .h-display-flex').first();
         const priceText = item.find('[data-test="current-price"]').text();
         const nameText = item.find('a[data-test="product-title"]').text();
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
       ebay: () => {
-        const item = $('.s-item').first();
-        const priceText = item.find('.s-item__price').text();
-        const nameText = item.find('.s-item__title').text();
+        const item = $('.s-item, .hl-item').first();
+        const priceText = item.find('.s-item__price').text() || item.find('.hl-item__displayPrice').text();
+        const nameText = item.find('.s-item__title').text() || item.find('.hl-item__link').text();
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
       bestbuy: () => {
-        const item = $('.sku-item').first();
-        const priceText = item.find('.priceView-customer-price span').first().text();
-        const nameText = item.find('.sku-title a').text();
+        const item = $('.sku-item, .list-item').first();
+        const priceText = item.find('.priceView-customer-price span').first().text() ||
+                          item.find('.pb-hero-price').text();
+        const nameText = item.find('.sku-title a').text() || item.find('.sku-header a').text();
+        return this.parseResult(priceText, nameText, productName, referencePrice);
+      },
+      newegg: () => {
+        const item = $('.item-container').first();
+        const priceText = item.find('.price-current').text();
+        const nameText = item.find('.item-title').text();
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
     };
@@ -273,7 +312,7 @@ export class CrossPlatformService {
     nameText: string,
     originalName: string,
     referencePrice: number
-  ): { price: number; name: string; confidence: number } | null {
+  ): { price: number; name: string; currency?: string; confidence: number } | null {
     if (!priceText || !nameText) return null;
 
     // Extract price number

@@ -24,16 +24,20 @@ describe('PredictionService', () => {
     });
   });
 
-  describe('calculateWaitDays', () => {
+  describe('calculateSmartWaitDays', () => {
     it('should suggest waiting for downward trend', () => {
+      const momentum = { rsi: 50, macdSignal: 'neutral', velocity: -0.05 };
       const eventFactor = { nearestEventDays: -1, expectedDiscount: 0 };
-      const waitDays = (predictionService as any).calculateWaitDays('down', eventFactor, 0.8);
+      const seasonal = { isHistoricallyLow: false };
+      const waitDays = (predictionService as any).calculateSmartWaitDays('down', momentum, eventFactor, 0.8, seasonal);
       expect(waitDays).toBeGreaterThan(0);
     });
 
     it('should suggest waiting for upcoming event', () => {
+      const momentum = { rsi: 50, macdSignal: 'neutral', velocity: 0 };
       const eventFactor = { nearestEventDays: 10, expectedDiscount: 20 };
-      const waitDays = (predictionService as any).calculateWaitDays('flat', eventFactor, 0.5);
+      const seasonal = { isHistoricallyLow: false };
+      const waitDays = (predictionService as any).calculateSmartWaitDays('flat', momentum, eventFactor, 0.5, seasonal);
       expect(waitDays).toBe(10);
     });
   });
