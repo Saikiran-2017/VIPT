@@ -4,6 +4,7 @@ import { productIdentityService } from '../services/productIdentityService';
 import { priceAggregationService } from '../services/priceAggregationService';
 import { validate } from '../middleware/validation';
 import { Platform } from '@shared/types';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -53,8 +54,15 @@ router.post(
         );
 
         // Background: Try to fetch and record prices from other platforms to build history faster
-        // We don't await this to keep the response fast
-        import('../services/crossPlatformService').then(({ crossPlatformService }) => {
+        // Limit background scraping to once per hour per product
+        const scrapingCacheKey = `scraping:triggered:${product.id}`;
+        import('../models/cache').then(async ({ cacheGet, cacheSet }) => {
+          const recentlyTriggered = await cacheGet(scrapingCacheKey);
+          if (recentlyTriggered) return;
+
+          await cacheSet(scrapingCacheKey, true, 3600);
+
+          const { crossPlatformService } = await import('../services/crossPlatformService');
           crossPlatformService.getCrossPlatformPrices(
             product.id,
             product.name,
@@ -65,9 +73,13 @@ router.post(
           ).then(comparison => {
             comparison.results.forEach(result => {
               if (result.method === 'scraped' && result.scrapedPrice && result.confidence > 0.7) {
+                // Safely cast to Platform enum
+                const platformValue = Object.values(Platform).find(p => p === result.platform);
+                if (!platformValue) return;
+
                 priceAggregationService.recordPrice(
                   product.id,
-                  result.platform as any,
+                  platformValue,
                   result.scrapedPrice,
                   0,
                   undefined,
@@ -76,10 +88,16 @@ router.post(
                   '',
                   undefined,
                   result.currency || 'USD'
-                ).catch(err => {});
+                ).catch(err => {
+                  logger.error(`Background price record failed for ${result.platform}:`, err);
+                });
               }
             });
-          }).catch(err => {});
+          }).catch(err => {
+            logger.error(`Background cross-platform search failed for product ${product.id}:`, err);
+          });
+        }).catch(err => {
+          logger.error(`Background scraping cache check failed for product ${product.id}:`, err);
         });
       }
 

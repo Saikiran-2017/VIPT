@@ -391,33 +391,44 @@ export class PredictionService {
     dataPoints: number
   ): PricePrediction {
     // Dynamic model weights - Adjusted for better accuracy
-    const weights = {
-      arima: 0.35,
-      holtWinters: 0.25,
-      elasticity: 0.15,
-      seasonal: 0.05,
-      event: 0.10,
-      crossPlatform: 0.10,
+    const weights = { ...PREDICTION_CONFIG.BASE_WEIGHTS };
+
+    // Multiplicative adjustment factors to avoid override conflicts
+    const adjustments = {
+      arima: 1.0,
+      holtWinters: 1.0,
+      elasticity: 1.0,
+      seasonal: 1.0,
+      event: 1.0,
+      crossPlatform: 1.0,
     };
 
     // Increase event weight if a major sale is imminent
     if (eventFactor.nearestEventDays > 0 && eventFactor.nearestEventDays <= 14) {
       const proximityFactor = 1 - (eventFactor.nearestEventDays / 14);
-      weights.event = 0.10 + 0.30 * proximityFactor;
-      weights.arima -= 0.15 * proximityFactor;
-      weights.holtWinters -= 0.10 * proximityFactor;
-    }
-    if (crossPlatform.platformCount > 2) {
-      weights.crossPlatform = 0.20;
-      weights.arima = 0.25;
-      weights.holtWinters = 0.20;
-    }
-    if (dataPoints < 30) {
-      weights.seasonal = 0.05;
-      weights.arima = 0.35;
+      adjustments.event *= (1 + 3.0 * proximityFactor);
+      adjustments.arima *= 0.8;
+      adjustments.holtWinters *= 0.8;
     }
 
-    // Normalize weights
+    // Increase cross-platform weight if we have good comparative data
+    if (crossPlatform.platformCount > 2) {
+      adjustments.crossPlatform *= 2.0;
+      adjustments.arima *= 0.9;
+    }
+
+    // Reduce seasonal weight if data is sparse
+    if (dataPoints < 30) {
+      adjustments.seasonal *= 0.5;
+      adjustments.arima *= 1.1;
+    }
+
+    // Apply adjustments
+    Object.keys(weights).forEach(k => {
+      (weights as any)[k] *= (adjustments as any)[k];
+    });
+
+    // Normalize weights to sum to 1.0
     const totalWeight = Object.values(weights).reduce((s, w) => s + w, 0);
     Object.keys(weights).forEach(k => {
       (weights as any)[k] /= totalWeight;
@@ -537,9 +548,9 @@ export class PredictionService {
 
     // Event proximity
     if (eventFactor.nearestEventDays > 0 && eventFactor.nearestEventDays <= 30) {
-      const eventImpact = (eventFactor.expectedDiscount / 100) * 0.3;
+      const eventImpact = (eventFactor.expectedDiscount / 100) * 1.5; // Increased weight
       const proximityBoost = 1 - (eventFactor.nearestEventDays / 30);
-      probability += eventImpact * (0.5 + proximityBoost * 0.5);
+      probability += eventImpact * (0.3 + proximityBoost * 0.7);
     }
 
     // Seasonal

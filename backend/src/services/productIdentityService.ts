@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { Product, ProductDetection, Platform } from '@shared/types';
 import { v4 as uuidv4 } from 'uuid';
 import stringSimilarity from 'string-similarity';
+import { MATCHING_CONFIG } from '@shared/constants';
 
 /**
  * Product Identity Service
@@ -45,7 +46,7 @@ export class ProductIdentityService {
     }
 
     // Strategy 2: SKU match on same platform (only if SKU is provided and reliable)
-    if (detection.sku && detection.sku.length > 5) {
+    if (detection.sku && detection.sku.length >= MATCHING_CONFIG.MIN_SKU_LENGTH) {
       const existing = await this.findBySku(detection.sku);
       if (existing) {
         logger.info(`Product matched by SKU: ${detection.sku}`);
@@ -142,9 +143,15 @@ export class ProductIdentityService {
   }
 
   private async findByModelNumber(modelNumber: string): Promise<Product | null> {
+    // Escape special chars for ILIKE to prevent injection
+    const escaped = modelNumber.replace(/[%_]/g, '\\$&');
     const result = await query(
-      'SELECT * FROM products WHERE model_number = $1 OR model_number ILIKE $2 LIMIT 1',
-      [modelNumber.toUpperCase(), `%${modelNumber}%`]
+      `SELECT *, similarity(model_number, $1) as sim
+       FROM products
+       WHERE model_number = $1
+          OR (model_number ILIKE $2 AND length(model_number) <= length($1) + 3)
+       ORDER BY sim DESC LIMIT 1`,
+      [modelNumber.toUpperCase(), `%${escaped}%`]
     );
     return result.rows[0] ? this.mapRowToProduct(result.rows[0]) : null;
   }
@@ -165,13 +172,14 @@ export class ProductIdentityService {
     let sql = `
       SELECT *, similarity(name, $1) AS sim
       FROM products
-      WHERE similarity(name, $1) > 0.4
+      WHERE similarity(name, $1) > ${MATCHING_CONFIG.FUZZY_THRESHOLD}
     `;
     const params: unknown[] = [normalizedName];
 
     if (brand) {
+      const escapedBrand = brand.replace(/[%_]/g, '\\$&');
       sql += ' AND brand ILIKE $2';
-      params.push(`%${brand}%`);
+      params.push(`%${escapedBrand}%`);
     }
 
     sql += ' ORDER BY sim DESC LIMIT 5';
@@ -186,7 +194,7 @@ export class ProductIdentityService {
       result.rows.map((r: { name: string }) => r.name.toLowerCase())
     );
 
-    if (bestMatch.bestMatch.rating > 0.5) {
+    if (bestMatch.bestMatch.rating > MATCHING_CONFIG.SIMILARITY_THRESHOLD) {
       return this.mapRowToProduct(result.rows[bestMatch.bestMatchIndex]);
     }
 

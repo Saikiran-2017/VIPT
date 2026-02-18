@@ -3,7 +3,7 @@ import * as cheerio from 'cheerio';
 import { cacheGet, cacheSet } from '../models/cache';
 import { logger } from '../utils/logger';
 import { Platform } from '@shared/types';
-import { PLATFORM_CONFIG } from '@shared/constants';
+import { PLATFORM_CONFIG, SCRAPING_CONFIG } from '@shared/constants';
 
 /**
  * Cross-Platform Price Intelligence Service
@@ -94,10 +94,17 @@ export class CrossPlatformService {
     // All platforms except the current one
     const otherPlatforms = Object.keys(SEARCH_URLS).filter(p => p !== currentPlatform);
 
-    // Attempt to get prices from each platform
-    const results: CrossPlatformResult[] = await Promise.all(
-      otherPlatforms.map(platform => this.checkPlatform(platform, searchQuery, productName, currentPrice))
-    );
+    // Attempt to get prices from each platform with concurrency limit
+    const results: CrossPlatformResult[] = [];
+    const limit = SCRAPING_CONFIG.CONCURRENCY_LIMIT;
+
+    for (let i = 0; i < otherPlatforms.length; i += limit) {
+      const chunk = otherPlatforms.slice(i, i + limit);
+      const chunkResults = await Promise.all(
+        chunk.map(platform => this.checkPlatform(platform, searchQuery, productName, currentPrice))
+      );
+      results.push(...chunkResults);
+    }
 
     const comparison: CrossPlatformComparison = {
       productName,
