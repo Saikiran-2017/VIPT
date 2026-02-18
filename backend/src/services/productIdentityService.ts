@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { Product, ProductDetection, Platform } from '@shared/types';
 import { v4 as uuidv4 } from 'uuid';
 import stringSimilarity from 'string-similarity';
+import { MATCHING_CONFIG } from '@shared/constants';
 
 /**
  * Product Identity Service
@@ -24,18 +25,28 @@ export class ProductIdentityService {
     const cached = await cacheGet<Product>(cacheKey);
     if (cached) return cached;
 
+    // Strategy 0: Universal Product ID match
+    const upid = this.generateUniversalProductId(detection);
+    const existingByUpid = await this.findByUniversalProductId(upid);
+    if (existingByUpid) {
+      logger.info(`Product matched by UPID: ${upid}`);
+      await cacheSet(cacheKey, existingByUpid, 3600);
+      return existingByUpid;
+    }
+
     // Strategy 1: Exact model number match
-    if (detection.modelNumber) {
-      const existing = await this.findByModelNumber(detection.modelNumber);
+    const modelNumber = detection.modelNumber || this.extractModelNumber(detection.name);
+    if (modelNumber) {
+      const existing = await this.findByModelNumber(modelNumber);
       if (existing) {
-        logger.info(`Product matched by model number: ${detection.modelNumber}`);
+        logger.info(`Product matched by model number: ${modelNumber}`);
         await cacheSet(cacheKey, existing, 3600);
         return existing;
       }
     }
 
-    // Strategy 2: SKU match on same platform
-    if (detection.sku) {
+    // Strategy 2: SKU match on same platform (only if SKU is provided and reliable)
+    if (detection.sku && detection.sku.length >= MATCHING_CONFIG.MIN_SKU_LENGTH) {
       const existing = await this.findBySku(detection.sku);
       if (existing) {
         logger.info(`Product matched by SKU: ${detection.sku}`);
@@ -88,7 +99,11 @@ export class ProductIdentityService {
   normalizeTitle(title: string): string {
     return title
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ') // Remove special chars including hyphens
+      // Remove common promotional phrases
+      .replace(/\b(free shipping|in stock|buy now|on sale|discount|limited time)\b/g, '')
+      // Remove common technical jargon that varies by platform but doesn't identify the core product
+      .replace(/\b(newest|latest|version|model|authentic|original|genuine|best price|lowest price)\b/g, '')
+      .replace(/[^\w\s]/g, ' ') // Remove special chars
       .replace(/\b(the|a|an|and|or|for|with|in|on|at|to|of)\b/g, '') // Remove stop words
       .replace(/\s+/g, ' ')
       .trim();
@@ -119,10 +134,24 @@ export class ProductIdentityService {
 
   // ─── Private Methods ──────────────────────────────────────────
 
-  private async findByModelNumber(modelNumber: string): Promise<Product | null> {
+  private async findByUniversalProductId(upid: string): Promise<Product | null> {
     const result = await query(
-      'SELECT * FROM products WHERE model_number = $1 LIMIT 1',
-      [modelNumber.toUpperCase()]
+      'SELECT * FROM products WHERE universal_product_id = $1 LIMIT 1',
+      [upid]
+    );
+    return result.rows[0] ? this.mapRowToProduct(result.rows[0]) : null;
+  }
+
+  private async findByModelNumber(modelNumber: string): Promise<Product | null> {
+    // Escape special chars for ILIKE to prevent injection
+    const escaped = modelNumber.replace(/[%_]/g, '\\$&');
+    const result = await query(
+      `SELECT *, similarity(model_number, $1) as sim
+       FROM products
+       WHERE model_number = $1
+          OR (model_number ILIKE $2 AND length(model_number) <= length($1) + 3)
+       ORDER BY sim DESC LIMIT 1`,
+      [modelNumber.toUpperCase(), `%${escaped}%`]
     );
     return result.rows[0] ? this.mapRowToProduct(result.rows[0]) : null;
   }
@@ -143,13 +172,14 @@ export class ProductIdentityService {
     let sql = `
       SELECT *, similarity(name, $1) AS sim
       FROM products
-      WHERE similarity(name, $1) > 0.4
+      WHERE similarity(name, $1) > ${MATCHING_CONFIG.FUZZY_THRESHOLD}
     `;
     const params: unknown[] = [normalizedName];
 
     if (brand) {
+      const escapedBrand = brand.replace(/[%_]/g, '\\$&');
       sql += ' AND brand ILIKE $2';
-      params.push(`%${brand}%`);
+      params.push(`%${escapedBrand}%`);
     }
 
     sql += ' ORDER BY sim DESC LIMIT 5';
@@ -164,7 +194,7 @@ export class ProductIdentityService {
       result.rows.map((r: { name: string }) => r.name.toLowerCase())
     );
 
-    if (bestMatch.bestMatch.rating > 0.5) {
+    if (bestMatch.bestMatch.rating > MATCHING_CONFIG.SIMILARITY_THRESHOLD) {
       return this.mapRowToProduct(result.rows[bestMatch.bestMatchIndex]);
     }
 

@@ -166,6 +166,12 @@ export default function PriceComparison({ productId }: Props) {
 
   return (
     <div className="p-3 space-y-2">
+      {/* AI Intelligence Badge */}
+      <div className="bg-vayu-900/10 border border-vayu-700/20 rounded-lg p-2 flex items-center justify-between mb-1">
+        <span className="text-[10px] font-bold text-vayu-400 uppercase tracking-tighter">AI Price Intelligence</span>
+        <span className="text-[9px] text-gray-500">Scanning {Object.keys(platformColors).length} platforms</span>
+      </div>
+
       {/* Anti-manipulation warning */}
       {data.antiManipulation && !data.antiManipulation.isGenuineDiscount && (
         <div className="bg-red-900/20 border border-red-800/30 rounded-lg p-2.5 flex items-start gap-2">
@@ -302,12 +308,20 @@ export default function PriceComparison({ productId }: Props) {
         </div>
       )}
 
-      {/* Savings tip */}
+      {/* Savings tip - More prominent */}
       {overallLowest < data.lowestPrice.totalEffectivePrice && (
-        <div className="bg-green-900/15 border border-green-800/30 rounded-lg p-2.5">
-          <p className="text-[10px] text-green-400 font-medium">
-            💰 Save ${(data.lowestPrice.totalEffectivePrice - overallLowest).toFixed(2)} on another platform!
-          </p>
+        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 shadow-lg shadow-green-900/10">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💰</span>
+            <div>
+              <p className="text-xs font-bold text-green-400">
+                Found a better deal!
+              </p>
+              <p className="text-[10px] text-green-400/80">
+                You can save <span className="font-bold text-white">${(data.lowestPrice.totalEffectivePrice - overallLowest).toFixed(2)}</span> by switching platforms.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
