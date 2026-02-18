@@ -206,9 +206,15 @@ export class ProductIdentityService {
     const universalProductId = this.generateUniversalProductId(detection);
     const modelNumber = detection.modelNumber || this.extractModelNumber(detection.name);
 
+    // Use ON CONFLICT to handle race conditions where the same product is detected twice simultaneously
     const result = await query(
       `INSERT INTO products (id, universal_product_id, name, brand, model_number, sku, image_url, name_embedding)
        VALUES ($1, $2, $3, $4, $5, $6, $7, to_tsvector('english', $8))
+       ON CONFLICT (universal_product_id) DO UPDATE SET
+         updated_at = NOW(),
+         image_url = COALESCE(products.image_url, EXCLUDED.image_url),
+         brand = COALESCE(products.brand, EXCLUDED.brand),
+         model_number = COALESCE(products.model_number, EXCLUDED.model_number)
        RETURNING *`,
       [id, universalProductId, detection.name, detection.brand || null, modelNumber || null, detection.sku || null, detection.imageUrl || null, detection.name]
     );
