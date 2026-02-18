@@ -24,18 +24,28 @@ export class ProductIdentityService {
     const cached = await cacheGet<Product>(cacheKey);
     if (cached) return cached;
 
+    // Strategy 0: Universal Product ID match
+    const upid = this.generateUniversalProductId(detection);
+    const existingByUpid = await this.findByUniversalProductId(upid);
+    if (existingByUpid) {
+      logger.info(`Product matched by UPID: ${upid}`);
+      await cacheSet(cacheKey, existingByUpid, 3600);
+      return existingByUpid;
+    }
+
     // Strategy 1: Exact model number match
-    if (detection.modelNumber) {
-      const existing = await this.findByModelNumber(detection.modelNumber);
+    const modelNumber = detection.modelNumber || this.extractModelNumber(detection.name);
+    if (modelNumber) {
+      const existing = await this.findByModelNumber(modelNumber);
       if (existing) {
-        logger.info(`Product matched by model number: ${detection.modelNumber}`);
+        logger.info(`Product matched by model number: ${modelNumber}`);
         await cacheSet(cacheKey, existing, 3600);
         return existing;
       }
     }
 
-    // Strategy 2: SKU match on same platform
-    if (detection.sku) {
+    // Strategy 2: SKU match on same platform (only if SKU is provided and reliable)
+    if (detection.sku && detection.sku.length > 5) {
       const existing = await this.findBySku(detection.sku);
       if (existing) {
         logger.info(`Product matched by SKU: ${detection.sku}`);
@@ -88,7 +98,11 @@ export class ProductIdentityService {
   normalizeTitle(title: string): string {
     return title
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ') // Remove special chars including hyphens
+      // Remove common promotional phrases
+      .replace(/\b(free shipping|in stock|buy now|on sale|discount|limited time)\b/g, '')
+      // Remove common technical jargon that varies by platform but doesn't identify the core product
+      .replace(/\b(newest|latest|version|model|authentic|original|genuine|best price|lowest price)\b/g, '')
+      .replace(/[^\w\s]/g, ' ') // Remove special chars
       .replace(/\b(the|a|an|and|or|for|with|in|on|at|to|of)\b/g, '') // Remove stop words
       .replace(/\s+/g, ' ')
       .trim();
@@ -119,10 +133,18 @@ export class ProductIdentityService {
 
   // ─── Private Methods ──────────────────────────────────────────
 
+  private async findByUniversalProductId(upid: string): Promise<Product | null> {
+    const result = await query(
+      'SELECT * FROM products WHERE universal_product_id = $1 LIMIT 1',
+      [upid]
+    );
+    return result.rows[0] ? this.mapRowToProduct(result.rows[0]) : null;
+  }
+
   private async findByModelNumber(modelNumber: string): Promise<Product | null> {
     const result = await query(
-      'SELECT * FROM products WHERE model_number = $1 LIMIT 1',
-      [modelNumber.toUpperCase()]
+      'SELECT * FROM products WHERE model_number = $1 OR model_number ILIKE $2 LIMIT 1',
+      [modelNumber.toUpperCase(), `%${modelNumber}%`]
     );
     return result.rows[0] ? this.mapRowToProduct(result.rows[0]) : null;
   }

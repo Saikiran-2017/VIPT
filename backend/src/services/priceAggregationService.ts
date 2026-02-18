@@ -120,12 +120,25 @@ export class PriceAggregationService {
     );
     const previousPrice = prevPriceResult.rows[0]?.price ? parseFloat(prevPriceResult.rows[0].price) : price;
 
-    // Record in price history
-    await query(
-      `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-      [uuidv4(), productId, platform, price, currency, discount ?? null, inStock]
+    // Record in price history only if price changed or it's been more than 4 hours
+    const recentHistoryResult = await query(
+      `SELECT price, recorded_at FROM price_history
+       WHERE product_id = $1 AND platform = $2
+       ORDER BY recorded_at DESC LIMIT 1`,
+      [productId, platform]
     );
+
+    const lastEntry = recentHistoryResult.rows[0];
+    const priceChanged = !lastEntry || Math.abs(parseFloat(lastEntry.price) - price) > 0.01;
+    const timePassed = lastEntry ? (Date.now() - new Date(lastEntry.recorded_at).getTime()) > 4 * 60 * 60 * 1000 : true;
+
+    if (priceChanged || timePassed) {
+      await query(
+        `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [uuidv4(), productId, platform, price, currency, discount ?? null, inStock]
+      );
+    }
 
     // Check for alerts
     try {
