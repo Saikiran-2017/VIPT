@@ -49,23 +49,23 @@ export class AlertService {
 
     const id = uuidv4();
 
-    await query(
-      `INSERT INTO alerts (id, user_id, product_id, alert_type, target_price, is_active)
-       VALUES ($1, $2, $3, $4, $5, true)`,
+    // Use ON CONFLICT to update existing alert instead of failing
+    const result = await query(
+      `INSERT INTO alerts (id, user_id, product_id, alert_type, target_price, is_active, triggered_at)
+       VALUES ($1, $2, $3, $4, $5, true, NULL)
+       ON CONFLICT (user_id, product_id, alert_type)
+       DO UPDATE SET
+         target_price = EXCLUDED.target_price,
+         is_active = true,
+         triggered_at = NULL
+       RETURNING *`,
       [id, userId, productId, type, targetPrice]
     );
 
-    logger.info(`Alert created: ${type} for product ${productId} by user ${userId}`);
+    const alert = this.mapRowToAlert(result.rows[0]);
+    logger.info(`Alert ${alert.id === id ? 'created' : 'updated'}: ${type} for product ${productId} by user ${userId}`);
 
-    return {
-      id,
-      userId,
-      productId,
-      type,
-      targetPrice,
-      isActive: true,
-      createdAt: new Date(),
-    };
+    return alert;
   }
 
   /**
