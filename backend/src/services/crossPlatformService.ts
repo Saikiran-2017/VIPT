@@ -248,16 +248,17 @@ export class CrossPlatformService {
   ): { price: number; name: string; currency?: string; confidence: number } | null {
     const extractors: Record<string, () => { price: number; name: string; currency?: string; confidence: number } | null> = {
       amazon: () => {
-        const item = $('div[data-component-type="s-search-result"]').first();
+        const item = $('div[data-component-type="s-search-result"], .s-result-item').first();
         const priceText = item.find('.a-price .a-offscreen').first().text() ||
+                          item.find('.a-price-whole').first().text() + '.' + item.find('.a-price-fraction').first().text() ||
                           item.find('.a-color-price').first().text();
-        const nameText = item.find('h2 a span').first().text();
+        const nameText = item.find('h2 a span, .a-size-medium.a-color-base.a-text-normal').first().text();
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
       flipkart: () => {
-        const item = $('div._1AtVbE, div.tAoY82, div._75_93D').first();
-        const priceText = item.find('div._30jeq3, div.Nx9bqj').first().text();
-        const nameText = item.find('a.IRpw9B, div._4rR01T, a.w_V_S_').first().text() ||
+        const item = $('div._1AtVbE, div.tAoY82, div._75_93D, div[data-id]').first();
+        const priceText = item.find('div._30jeq3, div.Nx9bqj, div._25b18c ._30jeq3').first().text();
+        const nameText = item.find('a.IRpw9B, div._4rR01T, a.w_V_S_, ._4rR01T').first().text() ||
                          item.find('a.s1Q9rs').first().text();
         const result = this.parseResult(priceText, nameText, productName, referencePrice);
         if (result) result.currency = 'INR';
@@ -293,21 +294,76 @@ export class CrossPlatformService {
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
       newegg: () => {
-        const item = $('.item-container').first();
-        const priceText = item.find('.price-current').text();
+        const item = $('.item-container, .item-cell').first();
+        const priceText = item.find('.price-current, .item-price strong').text();
         const nameText = item.find('.item-title').text();
         return this.parseResult(priceText, nameText, productName, referencePrice);
       },
     };
 
+    // Generic fallback for other platforms
     const extractor = extractors[platform];
     if (extractor) {
       try {
-        return extractor();
-      } catch {
-        return null;
+        const result = extractor();
+        if (result) return result;
+      } catch (err) {
+        logger.debug(`Specific extractor failed for ${platform}:`, err);
       }
     }
+
+    // Generic extraction logic if specific one fails
+    return this.extractGenericResult($, productName, referencePrice);
+  }
+
+  /**
+   * Generic extractor that looks for common price and title patterns in search results
+   */
+  private extractGenericResult(
+    $: ReturnType<typeof cheerio.load>,
+    productName: string,
+    referencePrice: number
+  ): { price: number; name: string; currency?: string; confidence: number } | null {
+    // Look for elements that look like price (e.g. $99.99)
+    const pricePatterns = [
+      /\$[\d,]+\.\d{2}/,
+      /₹[\d,]+/,
+      /€[\d,]+\.\d{2}/,
+      /£[\d,]+\.\d{2}/
+    ];
+
+    // Common search result containers
+    const containers = $('.search-result, .product-item, .item, article, [data-testid="product"], .s-result-item, .item-container');
+
+    for (let i = 0; i < Math.min(containers.length, 10); i++) {
+      const container = $(containers[i]);
+
+      // Try to find price within container
+      let price: number | null = null;
+
+      // Look for text nodes or specific price classes
+      const text = container.text();
+      for (const pattern of pricePatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          const priceStr = match[0].replace(/[^\d.]/g, '');
+          price = parseFloat(priceStr);
+          if (price > 0) break;
+        }
+      }
+
+      if (price && price > 0) {
+        // Try to find a link or heading that might be the title
+        const title = container.find('h1, h2, h3, h4, a[title], .title, .name, [class*="title"], [class*="name"]').first().text() ||
+                      container.find('a').first().text();
+
+        if (title && title.length > 10) {
+          const result = this.parseResult(price.toString(), title, productName, referencePrice);
+          if (result) return result;
+        }
+      }
+    }
+
     return null;
   }
 
