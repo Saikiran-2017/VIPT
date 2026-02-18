@@ -103,8 +103,35 @@ export default function PriceHistory({ productId }: Props) {
 
   const vol = volatilityColors[data.volatilityIndex] || volatilityColors.stable;
 
+  const latestPrice = chartData[chartData.length - 1]?.price || 0;
+  const prevPrice = chartData[chartData.length - 2]?.price || latestPrice;
+  const priceChange = latestPrice - prevPrice;
+  const percentChange = prevPrice > 0 ? (priceChange / prevPrice) * 100 : 0;
+
   return (
     <div className="p-3 space-y-3">
+      {/* Price Trend Summary */}
+      <div className="flex items-center justify-between bg-gray-800/20 rounded-lg p-2.5 border border-gray-700/30">
+        <div>
+          <p className="text-[10px] text-gray-500 uppercase">Current Trend</p>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-sm font-bold ${priceChange < 0 ? 'text-green-400' : priceChange > 0 ? 'text-red-400' : 'text-gray-300'}`}>
+              {priceChange < 0 ? '▼' : priceChange > 0 ? '▲' : '●'}
+              {Math.abs(percentChange).toFixed(1)}%
+            </span>
+            <span className="text-[10px] text-gray-500">
+              {priceChange < 0 ? 'Decrease' : priceChange > 0 ? 'Increase' : 'Stable'}
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-gray-500 uppercase">Price Range</p>
+          <p className="text-xs font-medium text-gray-300">
+            {currencySymbol}{(data.allTimeHigh - data.allTimeLow).toFixed(2)} spread
+          </p>
+        </div>
+      </div>
+
       {/* Sparse data notice */}
       {data.priceHistory.length < 5 && (
         <div className="bg-blue-900/20 border border-blue-800/30 rounded-lg p-2.5">

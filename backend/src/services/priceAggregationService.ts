@@ -9,7 +9,7 @@ import {
   Platform,
   VolatilityCategory,
 } from '@shared/types';
-import { API_CONFIG, PREDICTION_CONFIG } from '@shared/constants';
+import { API_CONFIG, PREDICTION_CONFIG, HISTORY_CONFIG } from '@shared/constants';
 import { v4 as uuidv4 } from 'uuid';
 import { antiManipulationService } from './antiManipulationService';
 import { recommendationService } from './recommendationService';
@@ -111,21 +111,27 @@ export class PriceAggregationService {
       ]
     );
 
-    // Get previous price for alert checking
-    const prevPriceResult = await query(
-      `SELECT price FROM price_history
+    // Get last price record to check if we should record a new one and for alert checking
+    const lastRecordResult = await query(
+      `SELECT price, recorded_at FROM price_history
        WHERE product_id = $1 AND platform = $2
        ORDER BY recorded_at DESC LIMIT 1`,
       [productId, platform]
     );
-    const previousPrice = prevPriceResult.rows[0]?.price ? parseFloat(prevPriceResult.rows[0].price) : price;
 
-    // Record in price history
-    await query(
-      `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-      [uuidv4(), productId, platform, price, currency, discount ?? null, inStock]
-    );
+    const lastEntry = lastRecordResult.rows[0];
+    const previousPrice = lastEntry?.price ? parseFloat(lastEntry.price) : price;
+
+    const priceChanged = !lastEntry || Math.abs(previousPrice - price) > 0.01;
+    const timePassed = lastEntry ? (Date.now() - new Date(lastEntry.recorded_at).getTime()) > HISTORY_CONFIG.RECORD_COOLDOWN_MS : true;
+
+    if (priceChanged || timePassed) {
+      await query(
+        `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [uuidv4(), productId, platform, price, currency, discount ?? null, inStock]
+      );
+    }
 
     // Check for alerts
     try {
@@ -213,14 +219,14 @@ export class PriceAggregationService {
     // Coefficient of variation (normalized std dev)
     const cv = averagePrice > 0 ? standardDeviation / averagePrice : 0;
 
-    // Change frequency (how often price changes)
+    // Change frequency (how often price changes) - Filtered to primary currency
     let changes = 0;
-    for (let i = 1; i < prices.length; i++) {
-      if (Math.abs(prices[i] - prices[i - 1]) > 0.01) {
+    for (let i = 1; i < effectivePrices.length; i++) {
+      if (Math.abs(effectivePrices[i] - effectivePrices[i - 1]) > 0.01) {
         changes++;
       }
     }
-    const changeFrequency = prices.length > 1 ? changes / (prices.length - 1) : 0;
+    const changeFrequency = effectivePrices.length > 1 ? changes / (effectivePrices.length - 1) : 0;
 
     // Volatility category
     let volatilityIndex: VolatilityCategory;
