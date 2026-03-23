@@ -7,11 +7,30 @@ import {
 import { loadValidatedFeatureContext } from '../services/priceHistoryForPrediction';
 import { predictionOutcomeService } from '../services/predictionOutcomeService';
 import { productProfiler } from '../services/productProfiler';
+import { modelHealthService } from '../services/modelHealthService';
 
 jest.mock('../services/priceHistoryForPrediction');
 jest.mock('../services/productProfiler', () => ({
   productProfiler: {
     getProductProfile: jest.fn(),
+  },
+}));
+jest.mock('../services/modelHealthService', () => ({
+  modelHealthService: {
+    getModelHealth: jest.fn().mockResolvedValue({
+      modelName: 'baseline_v1',
+      latestMape7d: 4,
+      latestMape30d: 4,
+      latestDirectionalAccuracy7d: 0.7,
+      latestDirectionalAccuracy30d: 0.7,
+      sampleCount: 10,
+      updatedAt: new Date(),
+      driftFlag: false,
+      driftReason: '',
+      driftSeverity: 'low',
+      healthStatus: 'healthy',
+      recommendedAction: 'monitor',
+    }),
   },
 }));
 jest.mock('../services/predictionOutcomeService', () => ({
@@ -30,6 +49,7 @@ jest.mock('../models/database', () => ({
 const mockedLoad = loadValidatedFeatureContext as jest.Mock;
 const mockedRecordOutcome = predictionOutcomeService.recordPrediction as jest.Mock;
 const mockedGetProfile = productProfiler.getProductProfile as jest.Mock;
+const mockedGetModelHealth = modelHealthService.getModelHealth as jest.Mock;
 
 const coldStartProfile = {
   productId: 'prod-1',
@@ -65,6 +85,20 @@ describe('PredictionService (baseline + FeatureEngineer)', () => {
     mockedRecordOutcome.mockReset();
     mockedRecordOutcome.mockResolvedValue('outcome-test-id');
     mockedGetProfile.mockResolvedValue(coldStartProfile);
+    mockedGetModelHealth.mockResolvedValue({
+      modelName: 'baseline_v1',
+      latestMape7d: 4,
+      latestMape30d: 4,
+      latestDirectionalAccuracy7d: 0.7,
+      latestDirectionalAccuracy30d: 0.7,
+      sampleCount: 10,
+      updatedAt: new Date(),
+      driftFlag: false,
+      driftReason: '',
+      driftSeverity: 'low',
+      healthStatus: 'healthy',
+      recommendedAction: 'monitor',
+    });
     svc = new PredictionService();
   });
 
@@ -99,6 +133,7 @@ describe('PredictionService (baseline + FeatureEngineer)', () => {
     expect(r.modelUsed).toBe(PredictionModel.BASELINE);
     expect(r.predictionOutcomeId).toBe('outcome-test-id');
     expect(r.enrichedSignals?.usableDataPoints).toBe(0);
+    expect(r.trustContext?.recommendedAction).toBe('collect_more_data');
   });
 
   it('predict works with a single validated point (no feature vector)', async () => {
