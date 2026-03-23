@@ -147,6 +147,23 @@ export interface EnrichedPredictionSignals {
   signalFactors: string[];
 }
 
+/** Phase 2 TrustEngine: deterministic trust metadata for prediction responses. */
+export type TrustTier = 'low' | 'medium' | 'high';
+
+export type TrustRecommendedAction =
+  | 'use_prediction'
+  | 'use_with_caution'
+  | 'collect_more_data'
+  | 'investigate_data_quality';
+
+export interface TrustContext {
+  trustScore: number;
+  trustTier: TrustTier;
+  trustFactors: string[];
+  cautionFlags: string[];
+  recommendedAction: TrustRecommendedAction;
+}
+
 export interface PricePrediction {
   productId: string;
   currentPrice: number;
@@ -165,6 +182,8 @@ export interface PricePrediction {
   predictionOutcomeId?: string;
   /** Phase 2: optional deterministic signals from history + features + ensemble mode. */
   enrichedSignals?: EnrichedPredictionSignals;
+  /** Phase 2: optional trust metadata (profiler + ensemble + signals + model health). */
+  trustContext?: TrustContext;
 }
 
 /**

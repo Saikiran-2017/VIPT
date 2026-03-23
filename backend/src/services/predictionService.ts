@@ -19,6 +19,9 @@ import {
   type PredictionStrategy,
 } from './dynamicEnsemble';
 import { enrichPredictionContext } from './signalEnricher';
+import { buildTrustContext } from './trustEngine';
+import { modelHealthService } from './modelHealthService';
+import { BASELINE_ROLLUP_MODEL } from './modelPerformanceService';
 
 export function rollingMeanLast(prices: number[], window: number): number {
   if (prices.length === 0) return 0;
@@ -57,6 +60,12 @@ export class PredictionService {
     const ctx = await loadValidatedFeatureContext(productId, platform);
     if (!ctx) {
       const empty = this.emptyPrediction(productId);
+      await this.attachTrustContext(empty, {
+        profile: null,
+        strategy: { mode: 'baseline_only' },
+        pricesLength: 0,
+        fallbackFreshness: null,
+      });
       await this.recordOutcomeSkeleton(productId, empty, platform);
       await cacheSet(cacheKey, empty, 300);
       return empty;
@@ -169,12 +178,58 @@ export class PredictionService {
       });
     }
 
+    await this.attachTrustContext(prediction, {
+      profile,
+      strategy,
+      pricesLength: prices.length,
+      fallbackFreshness,
+    });
+
     await this.recordOutcomeSkeleton(productId, prediction, platform);
 
     await cacheSet(cacheKey, prediction, API_CONFIG.CACHE_TTL.PREDICTION);
     await this.storePrediction(prediction);
 
     return prediction;
+  }
+
+  private async attachTrustContext(
+    prediction: PricePrediction,
+    args: {
+      profile: ProductProfile | null;
+      strategy: PredictionStrategy;
+      pricesLength: number;
+      fallbackFreshness: number | null;
+    }
+  ): Promise<void> {
+    let modelHealth = null;
+    try {
+      modelHealth = await modelHealthService.getModelHealth(BASELINE_ROLLUP_MODEL);
+    } catch (err) {
+      logger.warn('TrustEngine: model health unavailable', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    try {
+      prediction.trustContext = buildTrustContext({
+        profile: args.profile,
+        strategy: args.strategy,
+        enrichedSignals: prediction.enrichedSignals,
+        modelHealth,
+        baselineConfidenceScore: prediction.confidenceScore,
+        usableDataPoints: args.pricesLength,
+        validatedFraction: args.profile?.validatedFraction ?? null,
+        freshnessMinutes:
+          prediction.enrichedSignals?.freshnessMinutes ??
+          args.fallbackFreshness ??
+          args.profile?.freshnessMinutes ??
+          null,
+      });
+    } catch (err) {
+      logger.warn('TrustEngine failed; continuing without trustContext', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   /** Prompt 8: skeleton row in `prediction_outcomes`; failures do not block the API response. */

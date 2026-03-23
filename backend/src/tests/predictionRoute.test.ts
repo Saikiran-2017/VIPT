@@ -30,6 +30,13 @@ jest.mock('../services/predictionService', () => ({
         selectedPredictionMode: 'baseline_only',
         signalFactors: ['cold start fallback'],
       },
+      trustContext: {
+        trustScore: 62,
+        trustTier: 'medium',
+        trustFactors: ['high validated data coverage'],
+        cautionFlags: ['cold start product'],
+        recommendedAction: 'use_with_caution',
+      },
     }),
   },
 }));
@@ -237,6 +244,8 @@ describe('GET /api/v1/predictions/:productId', () => {
     expect(res.body.predictionOutcomeId).toBe('outcome-route-id');
     expect(res.body.data.enrichedSignals?.selectedPredictionMode).toBe('baseline_only');
     expect(Array.isArray(res.body.data.enrichedSignals?.signalFactors)).toBe(true);
+    expect(res.body.data.trustContext?.trustTier).toBe('medium');
+    expect(res.body.data.trustContext?.trustScore).toBe(62);
   });
 
   it('includes featureVector when debug=1', async () => {
