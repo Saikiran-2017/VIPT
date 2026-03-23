@@ -2,6 +2,8 @@ import request from 'supertest';
 import { createExpressApp } from '../server';
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
 import { modelPerformanceService } from '../services/modelPerformanceService';
+import { predictionService } from '../services/predictionService';
+import { productProfiler } from '../services/productProfiler';
 
 jest.mock('../services/predictionService', () => ({
   predictionService: {
@@ -61,6 +63,23 @@ jest.mock('../services/predictionOutcomeEvaluationService', () => ({
       noActualPrice: 0,
       skipped: 0,
       errors: 0,
+    }),
+  },
+}));
+
+jest.mock('../services/productProfiler', () => ({
+  productProfiler: {
+    getProductProfile: jest.fn().mockResolvedValue({
+      productId: 'pid',
+      usableDataPoints: 20,
+      validatedFraction: 0.9,
+      freshnessMinutes: 60,
+      volatilityClass: 'moderate',
+      isSeasonal: false,
+      isColdStart: false,
+      trendDirection: 'flat',
+      profileConfidence: 0.75,
+      recommendedBaselineMode: 'rolling_mean_7d',
     }),
   },
 }));
@@ -168,6 +187,32 @@ describe('GET /api/v1/predictions/model-health', () => {
     expect(res.body.data.healthyCount).toBe(1);
     expect(res.body.data.degradedCount).toBe(0);
     expect(res.body.data.highestMape7dModel).toBe('baseline_v1');
+  });
+});
+
+const mockGetProductProfile = productProfiler.getProductProfile as jest.Mock;
+const mockPredict = predictionService.predict as jest.Mock;
+
+describe('GET /api/v1/predictions/profile/:productId', () => {
+  beforeEach(() => {
+    mockGetProductProfile.mockClear();
+  });
+
+  it('returns profile JSON and does not invoke baseline prediction', async () => {
+    const app = createExpressApp();
+    const res = await request(app).get('/api/v1/predictions/profile/pid').expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.productId).toBe('pid');
+    expect(res.body.data.volatilityClass).toBe('moderate');
+    expect(res.body.data.profileConfidence).toBe(0.75);
+    expect(mockGetProductProfile).toHaveBeenCalledWith('pid', undefined);
+    expect(mockPredict).not.toHaveBeenCalled();
+  });
+
+  it('passes platform query to profiler', async () => {
+    const app = createExpressApp();
+    await request(app).get('/api/v1/predictions/profile/pid?platform=amazon').expect(200);
+    expect(mockGetProductProfile).toHaveBeenCalledWith('pid', 'amazon');
   });
 });
 

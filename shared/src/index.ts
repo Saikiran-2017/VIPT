@@ -171,6 +171,26 @@ export interface PredictionEvaluationSummary {
   readinessScore: number;
 }
 
+/**
+ * Product intelligence profile from validated price history (Phase 2 ProductProfiler).
+ * Backend-only; used for routing and later ensemble logic.
+ */
+export interface ProductProfile {
+  productId: string;
+  usableDataPoints: number;
+  validatedFraction: number;
+  /** Minutes since last non-rejected observation; null if none. */
+  freshnessMinutes: number | null;
+  volatilityClass: 'stable' | 'moderate' | 'volatile';
+  isSeasonal: boolean;
+  isColdStart: boolean;
+  trendDirection: 'up' | 'down' | 'flat';
+  /** 0–1 confidence in this profile. */
+  profileConfidence: number;
+  /** Hint for baseline / routing (deterministic tag, not an ML model name). */
+  recommendedBaselineMode: string;
+}
+
 export interface PredictionOutcome {
   id: string;
   productId: string;
