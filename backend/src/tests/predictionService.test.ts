@@ -86,6 +86,9 @@ describe('PredictionService (baseline + FeatureEngineer)', () => {
     expect(r.featureVector?.dimension).toBe(19);
     expect(r.confidenceScore).toBeGreaterThan(0);
     expect(r.predictionOutcomeId).toBe('outcome-test-id');
+    expect(r.enrichedSignals?.selectedPredictionMode).toBe('baseline_only');
+    expect(r.enrichedSignals?.usableDataPoints).toBe(7);
+    expect(r.enrichedSignals?.signalFactors).toContain('cold start fallback');
   });
 
   it('predict handles empty history', async () => {
@@ -95,6 +98,7 @@ describe('PredictionService (baseline + FeatureEngineer)', () => {
     expect(r.predictedPrice).toBe(0);
     expect(r.modelUsed).toBe(PredictionModel.BASELINE);
     expect(r.predictionOutcomeId).toBe('outcome-test-id');
+    expect(r.enrichedSignals?.usableDataPoints).toBe(0);
   });
 
   it('predict works with a single validated point (no feature vector)', async () => {
