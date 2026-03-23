@@ -116,6 +116,18 @@ CREATE TABLE IF NOT EXISTS prediction_outcomes (
 CREATE INDEX IF NOT EXISTS idx_prediction_outcomes_product ON prediction_outcomes(product_id);
 CREATE INDEX IF NOT EXISTS idx_prediction_outcomes_evaluated ON prediction_outcomes(evaluated_at DESC);
 
+-- Phase 2: user/system feedback linked to prediction outcomes
+CREATE TABLE IF NOT EXISTS prediction_feedback (
+  feedback_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  prediction_outcome_id UUID NOT NULL REFERENCES prediction_outcomes(id) ON DELETE CASCADE,
+  feedback_type VARCHAR(32) NOT NULL CHECK (feedback_type IN ('correct', 'incorrect', 'uncertain')),
+  confidence_rating NUMERIC(6,3),
+  feedback_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_prediction_feedback_outcome ON prediction_feedback(prediction_outcome_id);
+
 CREATE TABLE IF NOT EXISTS model_performance (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   model_name VARCHAR(100) NOT NULL,

@@ -4,6 +4,19 @@ import { predictionOutcomeEvaluationService } from '../services/predictionOutcom
 import { modelPerformanceService } from '../services/modelPerformanceService';
 import { predictionService } from '../services/predictionService';
 import { productProfiler } from '../services/productProfiler';
+import { feedbackService, OutcomeNotFoundError } from '../services/feedbackService';
+
+jest.mock('../services/feedbackService', () => {
+  const actual = jest.requireActual('../services/feedbackService') as typeof import('../services/feedbackService');
+  return {
+    ...actual,
+    feedbackService: {
+      submitFeedback: jest.fn(),
+      outcomeExists: jest.fn(),
+      getFeedbackForOutcome: jest.fn(),
+    },
+  };
+});
 
 jest.mock('../services/predictionService', () => ({
   predictionService: {
@@ -357,6 +370,100 @@ describe('POST /api/v1/predictions/model-performance/refresh', () => {
       lookbackDays: 30,
       modelName: 'baseline_v1',
     });
+  });
+});
+
+const mockSubmitFeedback = feedbackService.submitFeedback as jest.Mock;
+const mockOutcomeExists = feedbackService.outcomeExists as jest.Mock;
+const mockGetFeedbackForOutcome = feedbackService.getFeedbackForOutcome as jest.Mock;
+
+describe('POST /api/v1/predictions/feedback', () => {
+  beforeEach(() => {
+    mockSubmitFeedback.mockReset();
+    mockSubmitFeedback.mockResolvedValue({
+      feedbackId: 'fb-1',
+      predictionOutcomeId: 'outcome-route-id',
+      feedbackType: 'correct',
+      confidenceRating: 0.9,
+      feedbackReason: 'matches',
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  it('submits feedback and returns stored row', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .post('/api/v1/predictions/feedback')
+      .send({
+        predictionOutcomeId: 'outcome-route-id',
+        feedbackType: 'correct',
+        confidenceRating: 0.9,
+        feedbackReason: 'matches',
+      })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.feedbackType).toBe('correct');
+    expect(mockSubmitFeedback).toHaveBeenCalled();
+  });
+
+  it('returns 400 when predictionOutcomeId missing', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .post('/api/v1/predictions/feedback')
+      .send({ feedbackType: 'correct' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 400 for invalid feedbackType', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .post('/api/v1/predictions/feedback')
+      .send({ predictionOutcomeId: 'x', feedbackType: 'maybe' })
+      .expect(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 404 when outcome does not exist', async () => {
+    mockSubmitFeedback.mockRejectedValueOnce(new OutcomeNotFoundError());
+    const app = createExpressApp();
+    const res = await request(app)
+      .post('/api/v1/predictions/feedback')
+      .send({ predictionOutcomeId: 'missing', feedbackType: 'uncertain' })
+      .expect(404);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+describe('GET /api/v1/predictions/feedback/:outcomeId', () => {
+  beforeEach(() => {
+    mockOutcomeExists.mockReset();
+    mockGetFeedbackForOutcome.mockReset();
+    mockOutcomeExists.mockResolvedValue(true);
+    mockGetFeedbackForOutcome.mockResolvedValue([
+      {
+        feedbackId: 'fb-1',
+        predictionOutcomeId: 'oid',
+        feedbackType: 'correct',
+        confidenceRating: null,
+        feedbackReason: null,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  });
+
+  it('returns feedback list when outcome exists', async () => {
+    const app = createExpressApp();
+    const res = await request(app).get('/api/v1/predictions/feedback/oid').expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.items).toHaveLength(1);
+    expect(mockGetFeedbackForOutcome).toHaveBeenCalledWith('oid');
+  });
+
+  it('returns 404 when outcome missing', async () => {
+    mockOutcomeExists.mockResolvedValueOnce(false);
+    const app = createExpressApp();
+    await request(app).get('/api/v1/predictions/feedback/missing').expect(404);
   });
 });
 
