@@ -7,6 +7,35 @@ import { query } from '../models/database';
 const router = Router();
 
 /**
+ * GET /api/v1/prices/features/:productId
+ * Phase 1 feature vector from stored price history (read-only; no ML).
+ */
+router.get(
+  '/features/:productId',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { productId } = req.params;
+      const fv = await priceAggregationService.buildFeatureVectorFromHistory(productId);
+      if (!fv) {
+        res.status(404).json({
+          success: false,
+          error: 'Insufficient price history (need at least 2 points)',
+          timestamp: new Date(),
+        });
+        return;
+      }
+      res.json({
+        success: true,
+        data: fv,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * GET /api/v1/prices/compare/:productId
  * Get cross-platform price comparison
  */
@@ -83,6 +112,8 @@ router.post(
         url,
         platformProductId,
         deliveryEstimate,
+        currency,
+        confidence,
       } = req.body;
 
       await priceAggregationService.recordPrice(
@@ -94,7 +125,9 @@ router.post(
         inStock,
         url,
         platformProductId,
-        deliveryEstimate
+        deliveryEstimate,
+        currency ?? 'USD',
+        confidence
       );
 
       res.json({

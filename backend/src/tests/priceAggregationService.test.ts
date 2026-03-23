@@ -3,6 +3,21 @@ import { query } from '../models/database';
 import { Platform } from '@shared/types';
 
 jest.mock('../models/database');
+jest.mock('../services/alertService', () => ({
+  alertService: {
+    checkAlerts: jest.fn().mockResolvedValue([]),
+  },
+}));
+jest.mock('../services/DataValidator', () => ({
+  dataValidator: {
+    validate: jest.fn().mockResolvedValue({
+      quality: 'validated',
+      reasons: [],
+      normalizedPriceUSD: 299,
+    }),
+  },
+}));
+
 const mockedQuery = query as jest.Mock;
 
 describe('PriceAggregationService', () => {

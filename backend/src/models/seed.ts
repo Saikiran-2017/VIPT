@@ -2,6 +2,8 @@ import { query } from './database';
 import { logger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
 import { RETAIL_EVENTS } from '@shared/constants';
+import { Platform } from '@shared/types';
+import { priceAggregationService } from '../services/priceAggregationService';
 
 async function seed(): Promise<void> {
   logger.info('Seeding database...');
@@ -67,10 +69,15 @@ async function seed(): Promise<void> {
       const variation = Math.sin(i / 15) * 20 + (Math.random() - 0.5) * 10;
       const price = Math.round((basePrice + variation) * 100) / 100;
 
-      await query(
-        `INSERT INTO price_history (id, product_id, platform, price, currency, in_stock, recorded_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [uuidv4(), demoProductId, platform, price, 'USD', true, date.toISOString()]
+      await priceAggregationService.appendPriceHistoryRecord(
+        demoProductId,
+        platform as Platform,
+        price,
+        'USD',
+        true,
+        date,
+        null,
+        0.95
       );
     }
   }
