@@ -3,6 +3,7 @@ import { predictionService } from '../services/predictionService';
 import { predictionEvaluationService } from '../services/predictionEvaluationService';
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
 import { modelPerformanceService } from '../services/modelPerformanceService';
+import { modelHealthService } from '../services/modelHealthService';
 import { Platform } from '@shared/types';
 
 const router = Router();
@@ -55,6 +56,70 @@ router.get(
       res.json({
         success: true,
         data: snapshot,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/predictions/model-health-summary
+ * Aggregate health counts (Prompt 13). Registered before /model-health/:modelName.
+ */
+router.get('/model-health-summary', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const summary = await modelHealthService.getHealthSummary();
+    res.json({
+      success: true,
+      data: summary,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/predictions/model-health
+ * Operational health for all models with severity and recommended actions (Prompt 13).
+ */
+router.get('/model-health', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const models = await modelHealthService.getAllModelHealth();
+    res.json({
+      success: true,
+      data: { models },
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/predictions/model-health/:modelName
+ * Single-model health (Prompt 13).
+ */
+router.get(
+  '/model-health/:modelName',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { modelName } = req.params;
+      const health = await modelHealthService.getModelHealth(modelName);
+      if (!health) {
+        res.status(404).json({
+          success: false,
+          error: 'No model health data for this model',
+          modelName,
+          timestamp: new Date(),
+        });
+        return;
+      }
+      res.json({
+        success: true,
+        data: health,
         timestamp: new Date(),
       });
     } catch (error) {
