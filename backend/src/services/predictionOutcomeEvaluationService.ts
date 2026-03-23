@@ -1,6 +1,7 @@
 import { query } from '../models/database';
 import { logger } from '../utils/logger';
 import type { Platform } from '@shared/types';
+import { modelPerformanceService } from './modelPerformanceService';
 
 const NEAR_ZERO = 1e-12;
 
@@ -220,6 +221,14 @@ export class PredictionOutcomeEvaluationService {
     }
 
     const u = updated.rows[0] as OutcomeRow;
+
+    void modelPerformanceService.updateForEvaluatedOutcome(u.id).catch((err) =>
+      logger.warn('Model performance rollup failed (outcome evaluation already succeeded)', {
+        outcomeId: u.id,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+
     return {
       status: 'evaluated',
       outcomeId: u.id,

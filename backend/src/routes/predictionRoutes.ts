@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { predictionService } from '../services/predictionService';
 import { predictionEvaluationService } from '../services/predictionEvaluationService';
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
+import { modelPerformanceService } from '../services/modelPerformanceService';
 import { Platform } from '@shared/types';
 
 const router = Router();
@@ -14,6 +15,85 @@ function parseOptionalFiniteNumber(v: unknown): number | undefined {
   }
   return undefined;
 }
+
+/**
+ * GET /api/v1/predictions/model-performance
+ * Latest stored rollups + drift flags for all models (Prompt 12).
+ */
+router.get('/model-performance', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const models = await modelPerformanceService.listModelPerformanceSnapshots();
+    res.json({
+      success: true,
+      data: { models },
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/predictions/model-performance/:modelName
+ * Single model rollup + drift (Prompt 12).
+ */
+router.get(
+  '/model-performance/:modelName',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { modelName } = req.params;
+      const snapshot = await modelPerformanceService.getModelPerformanceSnapshot(modelName);
+      if (!snapshot) {
+        res.status(404).json({
+          success: false,
+          error: 'No model performance data for this model',
+          modelName,
+          timestamp: new Date(),
+        });
+        return;
+      }
+      res.json({
+        success: true,
+        data: snapshot,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/predictions/model-performance/refresh
+ * Recompute rolling model_performance metrics from evaluated outcomes (Prompt 11).
+ */
+router.post(
+  '/model-performance/refresh',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const lookbackDays = parseOptionalFiniteNumber(req.body?.lookbackDays);
+      const limit = parseOptionalFiniteNumber(req.body?.limit);
+      const modelName =
+        typeof req.body?.modelName === 'string' && req.body.modelName.trim() !== ''
+          ? req.body.modelName.trim()
+          : undefined;
+
+      const result = await modelPerformanceService.refreshPerformanceRollups({
+        ...(lookbackDays !== undefined ? { lookbackDays } : {}),
+        ...(limit !== undefined ? { limit } : {}),
+        ...(modelName !== undefined ? { modelName } : {}),
+      });
+
+      res.json({
+        success: true,
+        ...result,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * POST /api/v1/predictions/outcomes/evaluate-pending

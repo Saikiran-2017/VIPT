@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { createExpressApp } from '../server';
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
+import { modelPerformanceService } from '../services/modelPerformanceService';
 
 jest.mock('../services/predictionService', () => ({
   predictionService: {
@@ -64,6 +65,77 @@ jest.mock('../services/predictionOutcomeEvaluationService', () => ({
   },
 }));
 
+jest.mock('../services/modelPerformanceService', () => ({
+  modelPerformanceService: {
+    refreshPerformanceRollups: jest.fn().mockResolvedValue({
+      modelsProcessed: ['baseline_v1'],
+      metricsUpserted: 5,
+    }),
+    updateForEvaluatedOutcome: jest.fn().mockResolvedValue(undefined),
+    listModelPerformanceSnapshots: jest.fn().mockResolvedValue([
+      {
+        model_name: 'baseline_v1',
+        mape_7d: 5,
+        mape_30d: 4,
+        directional_accuracy_7d: 0.6,
+        directional_accuracy_30d: 0.7,
+        sample_count: 10,
+        updated_at: new Date('2025-06-01T00:00:00.000Z'),
+        driftFlag: false,
+        driftReason: '',
+      },
+    ]),
+    getModelPerformanceSnapshot: jest.fn().mockImplementation((name: string) => {
+      if (name === 'unknown-model') {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve({
+        model_name: 'baseline_v1',
+        mape_7d: 5,
+        mape_30d: 4,
+        directional_accuracy_7d: 0.6,
+        directional_accuracy_30d: 0.7,
+        sample_count: 10,
+        updated_at: new Date('2025-06-01T00:00:00.000Z'),
+        driftFlag: false,
+        driftReason: '',
+      });
+    }),
+  },
+}));
+
+const mockListSnapshots = modelPerformanceService.listModelPerformanceSnapshots as jest.Mock;
+const mockGetSnapshot = modelPerformanceService.getModelPerformanceSnapshot as jest.Mock;
+
+describe('GET /api/v1/predictions/model-performance', () => {
+  it('returns all model rollups', async () => {
+    const app = createExpressApp();
+    const res = await request(app).get('/api/v1/predictions/model-performance').expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.models).toHaveLength(1);
+    expect(res.body.data.models[0].model_name).toBe('baseline_v1');
+    expect(res.body.data.models[0].mape_7d).toBe(5);
+    expect(mockListSnapshots).toHaveBeenCalled();
+  });
+
+  it('returns single model snapshot', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .get('/api/v1/predictions/model-performance/baseline_v1')
+      .expect(200);
+    expect(res.body.data.model_name).toBe('baseline_v1');
+    expect(mockGetSnapshot).toHaveBeenCalledWith('baseline_v1');
+  });
+
+  it('returns 404 when no data for model', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .get('/api/v1/predictions/model-performance/unknown-model')
+      .expect(404);
+    expect(res.body.success).toBe(false);
+  });
+});
+
 describe('GET /api/v1/predictions/:productId', () => {
   const app = createExpressApp();
 
@@ -97,6 +169,7 @@ describe('GET /api/v1/predictions/:productId', () => {
 
 const mockEvaluateOutcome = predictionOutcomeEvaluationService.evaluateOutcome as jest.Mock;
 const mockEvaluatePendingOutcomes = predictionOutcomeEvaluationService.evaluatePendingOutcomes as jest.Mock;
+const mockRefreshPerformanceRollups = modelPerformanceService.refreshPerformanceRollups as jest.Mock;
 
 describe('POST /api/v1/predictions/outcomes/:outcomeId/evaluate', () => {
   beforeEach(() => {
@@ -167,7 +240,26 @@ describe('POST /api/v1/predictions/outcomes/evaluate-pending', () => {
       accurateMapeThreshold: 4,
     });
   });
+});
 
+describe('POST /api/v1/predictions/model-performance/refresh', () => {
+  it('returns rollup summary', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .post('/api/v1/predictions/model-performance/refresh')
+      .send({ limit: 5, lookbackDays: 30, modelName: 'baseline_v1' })
+      .expect(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.modelsProcessed).toEqual(['baseline_v1']);
+    expect(mockRefreshPerformanceRollups).toHaveBeenCalledWith({
+      limit: 5,
+      lookbackDays: 30,
+      modelName: 'baseline_v1',
+    });
+  });
+});
+
+describe('POST /api/v1/predictions/outcomes routes (integration)', () => {
   it('single-outcome evaluate route still works after batch route exists', async () => {
     mockEvaluateOutcome.mockResolvedValue({
       status: 'evaluated',

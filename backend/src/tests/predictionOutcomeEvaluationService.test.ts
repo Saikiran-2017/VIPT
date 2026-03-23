@@ -1,9 +1,17 @@
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
+import { modelPerformanceService } from '../services/modelPerformanceService';
 import { query } from '../models/database';
 
 jest.mock('../models/database');
+jest.mock('../services/modelPerformanceService', () => ({
+  modelPerformanceService: {
+    updateForEvaluatedOutcome: jest.fn().mockResolvedValue(undefined),
+    refreshPerformanceRollups: jest.fn().mockResolvedValue({ modelsProcessed: [], metricsUpserted: 0 }),
+  },
+}));
 
 const mockedQuery = query as jest.Mock;
+const mockUpdateRollup = modelPerformanceService.updateForEvaluatedOutcome as jest.Mock;
 
 const OID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const OID2 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -31,6 +39,7 @@ function skeletonRow(overrides: Partial<Record<string, unknown>> = {}) {
 describe('PredictionOutcomeEvaluationService', () => {
   beforeEach(() => {
     mockedQuery.mockReset();
+    mockUpdateRollup.mockClear();
   });
 
   it('evaluates a skeleton row and writes metrics', async () => {
@@ -97,6 +106,8 @@ describe('PredictionOutcomeEvaluationService', () => {
       expect(r.directionCorrect).toBe(true);
     }
     expect(mockedQuery).toHaveBeenCalledTimes(1);
+    await new Promise<void>((resolve) => setImmediate(() => resolve()));
+    expect(mockUpdateRollup).not.toHaveBeenCalled();
   });
 
   it('returns no_actual_price when no validated observation after prediction', async () => {
