@@ -6,8 +6,14 @@ import {
 } from '../services/predictionService';
 import { loadValidatedFeatureContext } from '../services/priceHistoryForPrediction';
 import { predictionOutcomeService } from '../services/predictionOutcomeService';
+import { productProfiler } from '../services/productProfiler';
 
 jest.mock('../services/priceHistoryForPrediction');
+jest.mock('../services/productProfiler', () => ({
+  productProfiler: {
+    getProductProfile: jest.fn(),
+  },
+}));
 jest.mock('../services/predictionOutcomeService', () => ({
   predictionOutcomeService: {
     recordPrediction: jest.fn().mockResolvedValue('outcome-test-id'),
@@ -23,6 +29,20 @@ jest.mock('../models/database', () => ({
 
 const mockedLoad = loadValidatedFeatureContext as jest.Mock;
 const mockedRecordOutcome = predictionOutcomeService.recordPrediction as jest.Mock;
+const mockedGetProfile = productProfiler.getProductProfile as jest.Mock;
+
+const coldStartProfile = {
+  productId: 'prod-1',
+  usableDataPoints: 7,
+  validatedFraction: 1,
+  freshnessMinutes: 1,
+  volatilityClass: 'moderate' as const,
+  isSeasonal: false,
+  isColdStart: true,
+  trendDirection: 'flat' as const,
+  profileConfidence: 0.35,
+  recommendedBaselineMode: 'conservative_baseline',
+};
 
 describe('baseline helpers', () => {
   it('rollingMeanLast uses up to 7 trailing points', () => {
@@ -44,6 +64,7 @@ describe('PredictionService (baseline + FeatureEngineer)', () => {
     jest.clearAllMocks();
     mockedRecordOutcome.mockReset();
     mockedRecordOutcome.mockResolvedValue('outcome-test-id');
+    mockedGetProfile.mockResolvedValue(coldStartProfile);
     svc = new PredictionService();
   });
 
@@ -102,5 +123,79 @@ describe('PredictionService (baseline + FeatureEngineer)', () => {
     const r = await svc.predict('prod-null-outcome');
     expect(r.modelUsed).toBe(PredictionModel.BASELINE);
     expect(r.predictionOutcomeId).toBeUndefined();
+  });
+
+  it('uses smoothed blend when profiler reports volatile and confident', async () => {
+    const prices = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 200];
+    mockedLoad.mockResolvedValue({
+      prices,
+      dates: prices.map((_, i) => new Date(Date.UTC(2024, 0, i + 1))),
+      featureVector: {
+        values: new Array(19).fill(0.1),
+        dimension: 19,
+        sourceModel: 'feature-engineer-v1',
+      },
+    });
+    mockedGetProfile.mockResolvedValueOnce({
+      ...coldStartProfile,
+      productId: 'volatile-prod',
+      usableDataPoints: 20,
+      isColdStart: false,
+      volatilityClass: 'volatile',
+      profileConfidence: 0.75,
+    });
+
+    const r = await svc.predict('volatile-prod');
+    const rm7 = rollingMeanLast(prices, 7);
+    const last = prices[prices.length - 1];
+    const expectedSmoothed = Math.round(((rm7 + last) / 2) * 100) / 100;
+    expect(r.predictedPrice).toBeCloseTo(expectedSmoothed, 2);
+    expect(r.factors.some((f) => f.name === 'Dynamic ensemble')).toBe(true);
+  });
+
+  it('uses conservative blend when profiler reports stable and confident', async () => {
+    const prices = Array.from({ length: 20 }, (_, i) => 100 + i);
+    mockedLoad.mockResolvedValue({
+      prices,
+      dates: prices.map((_, i) => new Date(Date.UTC(2024, 0, i + 1))),
+      featureVector: {
+        values: new Array(19).fill(0.1),
+        dimension: 19,
+        sourceModel: 'feature-engineer-v1',
+      },
+    });
+    mockedGetProfile.mockResolvedValueOnce({
+      ...coldStartProfile,
+      productId: 'stable-prod',
+      usableDataPoints: 20,
+      isColdStart: false,
+      volatilityClass: 'stable',
+      profileConfidence: 0.75,
+    });
+
+    const r = await svc.predict('stable-prod');
+    const rm7 = rollingMeanLast(prices, 7);
+    const rm30 = rollingMeanLast(prices, 30);
+    const expected = Math.round((0.65 * rm30 + 0.35 * rm7) * 100) / 100;
+    expect(r.predictedPrice).toBeCloseTo(expected, 2);
+    expect(r.factors.some((f) => f.description?.includes('Stable'))).toBe(true);
+  });
+
+  it('falls back to baseline when profiler throws', async () => {
+    const prices = [100, 95, 90, 85, 80, 75, 70];
+    mockedLoad.mockResolvedValue({
+      prices,
+      dates: prices.map((_, i) => new Date(Date.UTC(2024, 0, i + 1))),
+      featureVector: {
+        values: new Array(19).fill(0.1),
+        dimension: 19,
+        sourceModel: 'feature-engineer-v1',
+      },
+    });
+    mockedGetProfile.mockRejectedValueOnce(new Error('db unavailable'));
+
+    const r = await svc.predict('prod-fail');
+    expect(r.predictedPrice).toBeCloseTo(rollingMeanLast(prices, 7), 2);
+    expect(r.factors.some((f) => f.name === 'Dynamic ensemble')).toBe(false);
   });
 });

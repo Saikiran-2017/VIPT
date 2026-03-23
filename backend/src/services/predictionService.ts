@@ -11,6 +11,12 @@ import {
 import { API_CONFIG } from '@shared/constants';
 import { loadValidatedFeatureContext } from './priceHistoryForPrediction';
 import { predictionOutcomeService } from './predictionOutcomeService';
+import { productProfiler } from './productProfiler';
+import {
+  adjustPredictedPrice,
+  getPredictionStrategy,
+  type PredictionStrategy,
+} from './dynamicEnsemble';
 
 export function rollingMeanLast(prices: number[], window: number): number {
   if (prices.length === 0) return 0;
@@ -42,7 +48,7 @@ export function baselineConfidenceFromPrices(prices: number[]): number {
  */
 export class PredictionService {
   async predict(productId: string, platform?: Platform): Promise<PricePrediction> {
-    const cacheKey = `prediction:baseline:${productId}:${platform || 'all'}`;
+    const cacheKey = `prediction:ensemble:${productId}:${platform || 'all'}`;
     const cached = await cacheGet<PricePrediction>(cacheKey);
     if (cached) return cached;
 
@@ -57,8 +63,36 @@ export class PredictionService {
     const { prices, featureVector } = ctx;
     const currentPrice = prices[prices.length - 1];
     const rm7 = rollingMeanLast(prices, 7);
-    const predictedPrice =
+    const rm30 = rollingMeanLast(prices, 30);
+    const baselinePredicted =
       rm7 > 0 ? Math.round(rm7 * 100) / 100 : Math.round(currentPrice * 100) / 100;
+
+    let strategy: PredictionStrategy = { mode: 'baseline_only' };
+    try {
+      const profile = await productProfiler.getProductProfile(productId, platform);
+      strategy = getPredictionStrategy(profile);
+    } catch (err) {
+      logger.warn('ProductProfiler failed; falling back to baseline_only', {
+        productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    let predictedPrice = baselinePredicted;
+    try {
+      predictedPrice = adjustPredictedPrice(strategy, {
+        currentPrice,
+        rm7,
+        rm30,
+        baselinePredicted,
+      });
+    } catch (err) {
+      logger.warn('DynamicEnsemble adjustment failed; using baseline point estimate', {
+        productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      predictedPrice = baselinePredicted;
+    }
 
     const confidenceScore = baselineConfidenceFromPrices(prices);
 
@@ -89,6 +123,17 @@ export class PredictionService {
         description: `Estimate uses the mean of up to the last 7 validated observations (current $${currentPrice.toFixed(2)} vs forecast $${predictedPrice.toFixed(2)}).`,
       },
     ];
+    if (strategy.mode !== 'baseline_only') {
+      factors.push({
+        name: 'Dynamic ensemble',
+        impact: 'neutral',
+        weight: 1,
+        description:
+          strategy.mode === 'smoothed'
+            ? `Volatile profile: blended 7d mean and last price (mode=${strategy.mode}).`
+            : `Stable profile: ${Math.round(0.65 * 100)}% weight on 30d mean, ${Math.round(0.35 * 100)}% on 7d mean (mode=${strategy.mode}).`,
+      });
+    }
 
     const prediction: PricePrediction = {
       productId,
