@@ -75,9 +75,9 @@ jest.mock('../services/modelPerformanceService', () => ({
     listModelPerformanceSnapshots: jest.fn().mockResolvedValue([
       {
         model_name: 'baseline_v1',
-        mape_7d: 5,
+        mape_7d: 4,
         mape_30d: 4,
-        directional_accuracy_7d: 0.6,
+        directional_accuracy_7d: 0.7,
         directional_accuracy_30d: 0.7,
         sample_count: 10,
         updated_at: new Date('2025-06-01T00:00:00.000Z'),
@@ -86,14 +86,14 @@ jest.mock('../services/modelPerformanceService', () => ({
       },
     ]),
     getModelPerformanceSnapshot: jest.fn().mockImplementation((name: string) => {
-      if (name === 'unknown-model') {
+      if (name === 'unknown-model' || name === 'unknown-health') {
         return Promise.resolve(null);
       }
       return Promise.resolve({
         model_name: 'baseline_v1',
-        mape_7d: 5,
+        mape_7d: 4,
         mape_30d: 4,
-        directional_accuracy_7d: 0.6,
+        directional_accuracy_7d: 0.7,
         directional_accuracy_30d: 0.7,
         sample_count: 10,
         updated_at: new Date('2025-06-01T00:00:00.000Z'),
@@ -114,7 +114,7 @@ describe('GET /api/v1/predictions/model-performance', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.models).toHaveLength(1);
     expect(res.body.data.models[0].model_name).toBe('baseline_v1');
-    expect(res.body.data.models[0].mape_7d).toBe(5);
+    expect(res.body.data.models[0].mape_7d).toBe(4);
     expect(mockListSnapshots).toHaveBeenCalled();
   });
 
@@ -133,6 +133,41 @@ describe('GET /api/v1/predictions/model-performance', () => {
       .get('/api/v1/predictions/model-performance/unknown-model')
       .expect(404);
     expect(res.body.success).toBe(false);
+  });
+});
+
+describe('GET /api/v1/predictions/model-health', () => {
+  it('returns health for all models', async () => {
+    const app = createExpressApp();
+    const res = await request(app).get('/api/v1/predictions/model-health').expect(200);
+    expect(res.body.data.models).toHaveLength(1);
+    expect(res.body.data.models[0].modelName).toBe('baseline_v1');
+    expect(res.body.data.models[0].healthStatus).toBe('healthy');
+    expect(res.body.data.models[0].recommendedAction).toBe('monitor');
+    expect(res.body.data.models[0].driftSeverity).toBe('low');
+  });
+
+  it('returns single model health', async () => {
+    const app = createExpressApp();
+    const res = await request(app)
+      .get('/api/v1/predictions/model-health/baseline_v1')
+      .expect(200);
+    expect(res.body.data.modelName).toBe('baseline_v1');
+    expect(res.body.data.latestMape7d).toBe(4);
+  });
+
+  it('returns 404 when no health data for model', async () => {
+    const app = createExpressApp();
+    await request(app).get('/api/v1/predictions/model-health/unknown-health').expect(404);
+  });
+
+  it('returns health summary', async () => {
+    const app = createExpressApp();
+    const res = await request(app).get('/api/v1/predictions/model-health-summary').expect(200);
+    expect(res.body.data.totalModels).toBe(1);
+    expect(res.body.data.healthyCount).toBe(1);
+    expect(res.body.data.degradedCount).toBe(0);
+    expect(res.body.data.highestMape7dModel).toBe('baseline_v1');
   });
 });
 
