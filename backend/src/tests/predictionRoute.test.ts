@@ -20,6 +20,16 @@ jest.mock('../services/predictionService', () => ({
       predictedPrice: 100,
       predictionOutcomeId: 'outcome-route-id',
       featureVector: { dimension: 19, values: new Array(19).fill(0) },
+      enrichedSignals: {
+        freshnessMinutes: 60,
+        usableDataPoints: 12,
+        validatedFraction: 0.9,
+        crossPlatformSpread: null,
+        nearestEventDays: null,
+        nearestEventDiscount: null,
+        selectedPredictionMode: 'baseline_only',
+        signalFactors: ['cold start fallback'],
+      },
     }),
   },
 }));
@@ -225,6 +235,8 @@ describe('GET /api/v1/predictions/:productId', () => {
     expect(res.body.data.predictedPrice).toBe(100);
     expect(res.body.data.featureVector).toBeUndefined();
     expect(res.body.predictionOutcomeId).toBe('outcome-route-id');
+    expect(res.body.data.enrichedSignals?.selectedPredictionMode).toBe('baseline_only');
+    expect(Array.isArray(res.body.data.enrichedSignals?.signalFactors)).toBe(true);
   });
 
   it('includes featureVector when debug=1', async () => {

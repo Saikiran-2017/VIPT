@@ -7,6 +7,7 @@ import {
   PredictionModel,
   PredictionFactor,
   Platform,
+  type ProductProfile,
 } from '@shared/types';
 import { API_CONFIG } from '@shared/constants';
 import { loadValidatedFeatureContext } from './priceHistoryForPrediction';
@@ -17,6 +18,7 @@ import {
   getPredictionStrategy,
   type PredictionStrategy,
 } from './dynamicEnsemble';
+import { enrichPredictionContext } from './signalEnricher';
 
 export function rollingMeanLast(prices: number[], window: number): number {
   if (prices.length === 0) return 0;
@@ -60,16 +62,17 @@ export class PredictionService {
       return empty;
     }
 
-    const { prices, featureVector } = ctx;
+    const { prices, featureVector, dates } = ctx;
     const currentPrice = prices[prices.length - 1];
     const rm7 = rollingMeanLast(prices, 7);
     const rm30 = rollingMeanLast(prices, 30);
     const baselinePredicted =
       rm7 > 0 ? Math.round(rm7 * 100) / 100 : Math.round(currentPrice * 100) / 100;
 
+    let profile: ProductProfile | null = null;
     let strategy: PredictionStrategy = { mode: 'baseline_only' };
     try {
-      const profile = await productProfiler.getProductProfile(productId, platform);
+      profile = await productProfiler.getProductProfile(productId, platform);
       strategy = getPredictionStrategy(profile);
     } catch (err) {
       logger.warn('ProductProfiler failed; falling back to baseline_only', {
@@ -149,6 +152,23 @@ export class PredictionService {
       featureVector,
     };
 
+    const lastDate = dates?.length ? dates[dates.length - 1] : null;
+    const fallbackFreshness = lastDate
+      ? Math.round((Date.now() - lastDate.getTime()) / 60000)
+      : null;
+    try {
+      prediction.enrichedSignals = enrichPredictionContext(productId, profile, prediction, {
+        strategy,
+        fallbackUsablePoints: prices.length,
+        fallbackFreshnessMinutes: fallbackFreshness,
+      });
+    } catch (err) {
+      logger.warn('SignalEnricher failed; continuing without enrichedSignals', {
+        productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     await this.recordOutcomeSkeleton(productId, prediction, platform);
 
     await cacheSet(cacheKey, prediction, API_CONFIG.CACHE_TTL.PREDICTION);
@@ -183,7 +203,7 @@ export class PredictionService {
   }
 
   private emptyPrediction(productId: string): PricePrediction {
-    return {
+    const empty: PricePrediction = {
       productId,
       currentPrice: 0,
       expectedPriceRange: { low: 0, high: 0 },
@@ -203,6 +223,19 @@ export class PredictionService {
       generatedAt: new Date(),
       predictedPrice: 0,
     };
+    try {
+      empty.enrichedSignals = enrichPredictionContext(productId, null, empty, {
+        strategy: { mode: 'baseline_only' },
+        fallbackUsablePoints: 0,
+        fallbackFreshnessMinutes: null,
+      });
+    } catch (err) {
+      logger.warn('SignalEnricher failed for empty prediction', {
+        productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return empty;
   }
 
   private async storePrediction(prediction: PricePrediction): Promise<void> {

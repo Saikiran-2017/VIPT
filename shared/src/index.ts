@@ -133,6 +133,20 @@ export interface PredictionFactor {
   description: string;
 }
 
+/**
+ * Deterministic context signals for observability (Phase 2 SignalEnricher). No ML, no external APIs.
+ */
+export interface EnrichedPredictionSignals {
+  freshnessMinutes: number | null;
+  usableDataPoints: number;
+  validatedFraction: number | null;
+  crossPlatformSpread: number | null;
+  nearestEventDays: number | null;
+  nearestEventDiscount: number | null;
+  selectedPredictionMode: 'baseline_only' | 'smoothed' | 'conservative';
+  signalFactors: string[];
+}
+
 export interface PricePrediction {
   productId: string;
   currentPrice: number;
@@ -149,6 +163,8 @@ export interface PricePrediction {
   featureVector?: FeatureVector;
   /** Set when a `prediction_outcomes` skeleton row is recorded (Prompt 8). */
   predictionOutcomeId?: string;
+  /** Phase 2: optional deterministic signals from history + features + ensemble mode. */
+  enrichedSignals?: EnrichedPredictionSignals;
 }
 
 /**
