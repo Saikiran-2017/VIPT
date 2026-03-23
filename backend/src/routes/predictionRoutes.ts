@@ -4,6 +4,7 @@ import { predictionEvaluationService } from '../services/predictionEvaluationSer
 import { predictionOutcomeEvaluationService } from '../services/predictionOutcomeEvaluationService';
 import { modelPerformanceService } from '../services/modelPerformanceService';
 import { modelHealthService } from '../services/modelHealthService';
+import { productProfiler } from '../services/productProfiler';
 import { Platform } from '@shared/types';
 
 const router = Router();
@@ -221,6 +222,29 @@ router.post(
       res.json({
         success: true,
         ...result,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/v1/predictions/profile/:productId
+ * Phase 2: deterministic product profile from validated `price_history` (routing / observability).
+ * Registered before `GET /:productId` so `profile` is not captured as a product id.
+ */
+router.get(
+  '/profile/:productId',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { productId } = req.params;
+      const platform = req.query.platform as Platform | undefined;
+      const profile = await productProfiler.getProductProfile(productId, platform);
+      res.json({
+        success: true,
+        data: profile,
         timestamp: new Date(),
       });
     } catch (error) {
