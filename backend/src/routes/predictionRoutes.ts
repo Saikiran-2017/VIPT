@@ -5,7 +5,8 @@ import { predictionOutcomeEvaluationService } from '../services/predictionOutcom
 import { modelPerformanceService } from '../services/modelPerformanceService';
 import { modelHealthService } from '../services/modelHealthService';
 import { productProfiler } from '../services/productProfiler';
-import { Platform } from '@shared/types';
+import { feedbackService, OutcomeNotFoundError } from '../services/feedbackService';
+import { Platform, type PredictionFeedbackInput, type PredictionFeedbackType } from '@shared/types';
 
 const router = Router();
 
@@ -222,6 +223,90 @@ router.post(
       res.json({
         success: true,
         ...result,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+const FEEDBACK_TYPES = new Set<PredictionFeedbackType>(['correct', 'incorrect', 'uncertain']);
+
+/**
+ * POST /api/v1/predictions/feedback
+ * Phase 2: record feedback for a prediction outcome.
+ */
+router.post('/feedback', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const outcomeRaw = req.body?.predictionOutcomeId ?? req.body?.outcomeId;
+    const feedbackType = req.body?.feedbackType as string | undefined;
+    if (typeof outcomeRaw !== 'string' || outcomeRaw.trim() === '') {
+      res.status(400).json({
+        success: false,
+        error: 'predictionOutcomeId is required',
+        timestamp: new Date(),
+      });
+      return;
+    }
+    if (typeof feedbackType !== 'string' || !FEEDBACK_TYPES.has(feedbackType as PredictionFeedbackType)) {
+      res.status(400).json({
+        success: false,
+        error: 'feedbackType must be one of: correct, incorrect, uncertain',
+        timestamp: new Date(),
+      });
+      return;
+    }
+
+    const input: PredictionFeedbackInput = {
+      feedbackType: feedbackType as PredictionFeedbackType,
+      confidenceRating: parseOptionalFiniteNumber(req.body?.confidenceRating),
+      feedbackReason:
+        typeof req.body?.feedbackReason === 'string' ? req.body.feedbackReason : undefined,
+    };
+
+    const data = await feedbackService.submitFeedback(outcomeRaw.trim(), input);
+    res.json({
+      success: true,
+      data,
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    if (error instanceof OutcomeNotFoundError) {
+      res.status(404).json({
+        success: false,
+        error: error.message,
+        timestamp: new Date(),
+      });
+      return;
+    }
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/predictions/feedback/:outcomeId
+ * List feedback rows for an outcome (newest logical order by created_at).
+ */
+router.get(
+  '/feedback/:outcomeId',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { outcomeId } = req.params;
+      const exists = await feedbackService.outcomeExists(outcomeId);
+      if (!exists) {
+        res.status(404).json({
+          success: false,
+          error: 'Prediction outcome not found',
+          outcomeId,
+          timestamp: new Date(),
+        });
+        return;
+      }
+      const items = await feedbackService.getFeedbackForOutcome(outcomeId);
+      res.json({
+        success: true,
+        data: { outcomeId, items },
         timestamp: new Date(),
       });
     } catch (error) {

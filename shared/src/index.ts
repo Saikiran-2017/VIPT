@@ -236,3 +236,22 @@ export interface PredictionOutcome {
   wasAccurate: boolean;
   errorMargin?: number;
 }
+
+/** Phase 2: feedback on evaluated (or pending) prediction outcomes. */
+export type PredictionFeedbackType = 'correct' | 'incorrect' | 'uncertain';
+
+export interface PredictionFeedbackInput {
+  feedbackType: PredictionFeedbackType;
+  /** Optional 0–1 confidence in the feedback itself. */
+  confidenceRating?: number;
+  feedbackReason?: string;
+}
+
+export interface PredictionFeedbackRecord {
+  feedbackId: string;
+  predictionOutcomeId: string;
+  feedbackType: PredictionFeedbackType;
+  confidenceRating: number | null;
+  feedbackReason: string | null;
+  createdAt: string;
+}
