@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { productIdentityService } from '../services/productIdentityService';
 import { priceAggregationService } from '../services/priceAggregationService';
+import { fetchCrossPlatformAndRecordScrapedPrices } from '../services/crossPlatformPriceIngest';
+import { enqueueCrossPlatformRefreshJob } from '../queues/priceUpdateQueue';
 import { validate } from '../middleware/validation';
 import { Platform } from '@shared/types';
 import { logger } from '../utils/logger';
@@ -20,6 +22,8 @@ const detectProductSchema = z.object({
   platform: z.nativeEnum(Platform),
   url: z.string().url(),
   imageUrl: z.string().url().optional(),
+  /** Optional client-side confidence (0–1) for DataValidator. */
+  confidence: z.number().min(0).max(1).optional(),
 });
 
 // ─── Routes ──────────────────────────────────────────────────
@@ -53,8 +57,7 @@ router.post(
           detection.currency
         );
 
-        // Background: Try to fetch and record prices from other platforms to build history faster
-        // Limit background scraping to once per hour per product
+        // Background: cross-platform refresh (BullMQ when Redis is up; else inline). Validator-first via `recordPrice`.
         const scrapingCacheKey = `scraping:triggered:${product.id}`;
         import('../models/cache').then(async ({ cacheGet, cacheSet }) => {
           const recentlyTriggered = await cacheGet(scrapingCacheKey);
@@ -62,41 +65,32 @@ router.post(
 
           await cacheSet(scrapingCacheKey, true, 3600);
 
-          const { crossPlatformService } = await import('../services/crossPlatformService');
-          crossPlatformService.getCrossPlatformPrices(
-            product.id,
-            product.name,
-            detection.platform,
-            detection.currentPrice,
-            product.brand,
-            product.modelNumber
-          ).then(comparison => {
-            comparison.results.forEach(result => {
-              if (result.method === 'scraped' && result.scrapedPrice && result.confidence > 0.7) {
-                // Safely cast to Platform enum
-                const platformValue = Object.values(Platform).find(p => p === result.platform);
-                if (!platformValue) return;
-
-                priceAggregationService.recordPrice(
-                  product.id,
-                  platformValue,
-                  result.scrapedPrice,
-                  0,
-                  undefined,
-                  true,
-                  result.searchUrl,
-                  '',
-                  undefined,
-                  result.currency || 'USD'
-                ).catch(err => {
-                  logger.error(`Background price record failed for ${result.platform}:`, err);
-                });
-              }
+          try {
+            await enqueueCrossPlatformRefreshJob({
+              productId: product.id,
+              productName: product.name,
+              sourcePlatform: detection.platform,
+              currentPrice: detection.currentPrice,
+              brand: product.brand,
+              modelNumber: product.modelNumber,
             });
-          }).catch(err => {
-            logger.error(`Background cross-platform search failed for product ${product.id}:`, err);
-          });
-        }).catch(err => {
+          } catch (queueErr) {
+            logger.warn(
+              `Queue enqueue failed for product ${product.id}, running cross-platform ingest inline`,
+              queueErr
+            );
+            fetchCrossPlatformAndRecordScrapedPrices(
+              product.id,
+              product.name,
+              detection.platform,
+              detection.currentPrice,
+              product.brand,
+              product.modelNumber
+            ).catch((err) => {
+              logger.error(`Inline cross-platform ingest failed for product ${product.id}:`, err);
+            });
+          }
+        }).catch((err) => {
           logger.error(`Background scraping cache check failed for product ${product.id}:`, err);
         });
       }

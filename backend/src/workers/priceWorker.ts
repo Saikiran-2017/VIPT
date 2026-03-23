@@ -2,18 +2,14 @@ import cron from 'node-cron';
 import { query } from '../models/database';
 import { cacheGet, cacheSet } from '../models/cache';
 import { priceAggregationService } from '../services/priceAggregationService';
-import { crossPlatformService } from '../services/crossPlatformService';
 import { logger } from '../utils/logger';
 import { Platform } from '@shared/types';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Price Update Worker
  * 
- * Periodically:
- * 1. Seeds realistic historical data for products with sparse history
- * 2. Checks for price updates on tracked products
- * 3. Refreshes cross-platform comparisons
+ * Periodically seeds realistic historical data for products with sparse history.
+ * Scheduled cross-platform refresh runs via BullMQ (`queues/scheduler.ts`).
  */
 
 export function startPriceWorker() {
@@ -28,14 +24,7 @@ export function startPriceWorker() {
     }
   });
 
-  // Refresh cross-platform data every 15 minutes
-  cron.schedule('*/15 * * * *', async () => {
-    try {
-      await refreshCrossPlatformData();
-    } catch (error) {
-      logger.error('Error in cross-platform refresh:', error);
-    }
-  });
+  // Cross-platform refresh is driven by BullMQ (see `queues/scheduler.ts` + `priceUpdateWorker.ts`).
 
   // Run initial seed immediately on startup
   setTimeout(async () => {
@@ -89,11 +78,15 @@ async function seedSparseProducts() {
     const pricesToInsert = historicalPrices.slice(0, pointsNeeded);
 
     for (const entry of pricesToInsert) {
-      await query(
-        `INSERT INTO price_history (id, product_id, platform, price, currency, in_stock, recorded_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT DO NOTHING`,
-        [uuidv4(), productId, platform, entry.price, currency, true, entry.date.toISOString()]
+      await priceAggregationService.appendPriceHistoryRecord(
+        productId,
+        platform as Platform,
+        entry.price,
+        currency,
+        true,
+        entry.date,
+        null,
+        0.95
       );
     }
 
@@ -210,36 +203,3 @@ function generateRealisticHistory(
   return entries;
 }
 
-/**
- * Refresh cross-platform comparison data for recently viewed products
- */
-async function refreshCrossPlatformData() {
-  const result = await query(`
-    SELECT p.id, p.name, p.brand, p.model_number,
-           pl.platform, pl.current_price
-    FROM products p
-    JOIN platform_listings pl ON p.id = pl.product_id
-    WHERE pl.last_updated > NOW() - INTERVAL '24 hours'
-    ORDER BY pl.last_updated DESC
-    LIMIT 5
-  `);
-
-  if (result.rows.length === 0) return;
-
-  logger.info(`Refreshing cross-platform data for ${result.rows.length} active products...`);
-
-  for (const row of result.rows) {
-    try {
-      await crossPlatformService.getCrossPlatformPrices(
-        row.id,
-        row.name,
-        row.platform,
-        parseFloat(row.current_price),
-        row.brand,
-        row.model_number
-      );
-    } catch (error) {
-      logger.error(`Failed to refresh cross-platform data for ${row.id}:`, error);
-    }
-  }
-}

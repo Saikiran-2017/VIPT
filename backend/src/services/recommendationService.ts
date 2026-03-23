@@ -5,7 +5,7 @@ import {
   Recommendation,
   RecommendationAction,
   PricePrediction,
-  VolatilityCategory,
+  ProductVolatility,
   RetailEvent,
   Platform,
 } from '@shared/types';
@@ -62,7 +62,7 @@ export class RecommendationService {
       currentPrice: number;
       allTimeLow: number;
       averagePrice: number;
-      volatility: VolatilityCategory;
+      volatility: ProductVolatility;
     },
     saleLikelihood: {
       likelihood: number;
@@ -124,10 +124,10 @@ export class RecommendationService {
     }
 
     // Factor 5: Volatility
-    if (stats.volatility === VolatilityCategory.HIGHLY_VOLATILE) {
+    if (stats.volatility === ProductVolatility.HIGHLY_VOLATILE) {
       score -= 1;
       reasoning.push('Price is highly volatile - potential for drops');
-    } else if (stats.volatility === VolatilityCategory.STABLE) {
+    } else if (stats.volatility === ProductVolatility.STABLE) {
       score += 1;
       reasoning.push('Price is stable - unlikely to change significantly');
     }
@@ -171,7 +171,7 @@ export class RecommendationService {
     currentPrice: number;
     allTimeLow: number;
     averagePrice: number;
-    volatility: VolatilityCategory;
+    volatility: ProductVolatility;
   }> {
     let sql = `
       SELECT
@@ -200,7 +200,7 @@ export class RecommendationService {
         currentPrice: 0,
         allTimeLow: 0,
         averagePrice: 0,
-        volatility: VolatilityCategory.STABLE,
+        volatility: ProductVolatility.STABLE,
       };
     }
 
@@ -208,13 +208,13 @@ export class RecommendationService {
     const stdDev = parseFloat(row.std_dev) || 0;
     const cv = avgPrice > 0 ? stdDev / avgPrice : 0;
 
-    let volatility: VolatilityCategory;
+    let volatility: ProductVolatility;
     if (cv < PREDICTION_CONFIG.VOLATILITY_THRESHOLDS.STABLE) {
-      volatility = VolatilityCategory.STABLE;
+      volatility = ProductVolatility.STABLE;
     } else if (cv < PREDICTION_CONFIG.VOLATILITY_THRESHOLDS.MODERATE) {
-      volatility = VolatilityCategory.MODERATE;
+      volatility = ProductVolatility.MODERATE;
     } else {
-      volatility = VolatilityCategory.HIGHLY_VOLATILE;
+      volatility = ProductVolatility.HIGHLY_VOLATILE;
     }
 
     return {

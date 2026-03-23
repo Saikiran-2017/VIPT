@@ -1,18 +1,13 @@
-// ─── Core Product Types ───────────────────────────────────────────
+import type {
+  AlertType,
+  Platform,
+  PricePrediction,
+  ProductVolatility,
+} from '../src/index';
 
-export interface Product {
-  id: string;
-  universalProductId: string;
-  name: string;
-  brand: string;
-  modelNumber?: string;
-  sku?: string;
-  category?: string;
-  imageUrl?: string;
-  description?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export * from '../src/index';
+
+// ─── Core Product Types (legacy / API) ───────────────────────────
 
 export interface ProductDetection {
   name: string;
@@ -27,17 +22,6 @@ export interface ProductDetection {
 }
 
 // ─── Platform Types ───────────────────────────────────────────────
-
-export enum Platform {
-  AMAZON = 'amazon',
-  FLIPKART = 'flipkart',
-  WALMART = 'walmart',
-  EBAY = 'ebay',
-  BESTBUY = 'bestbuy',
-  TARGET = 'target',
-  NEWEGG = 'newegg',
-  ALIEXPRESS = 'aliexpress',
-}
 
 export interface PlatformListing {
   id: string;
@@ -72,16 +56,10 @@ export interface PriceHistoryStats {
   allTimeLow: number;
   allTimeHigh: number;
   averagePrice: number;
-  volatilityIndex: VolatilityCategory;
+  volatilityIndex: ProductVolatility;
   standardDeviation: number;
   changeFrequency: number;
   priceHistory: PriceHistoryEntry[];
-}
-
-export enum VolatilityCategory {
-  STABLE = 'stable',
-  MODERATE = 'moderate',
-  HIGHLY_VOLATILE = 'highly_volatile',
 }
 
 // ─── Price Comparison Types ───────────────────────────────────────
@@ -94,37 +72,6 @@ export interface PriceComparison {
   recommendation: Recommendation;
   antiManipulation: AntiManipulationResult;
   lastUpdated: Date;
-}
-
-// ─── Prediction Types ─────────────────────────────────────────────
-
-export interface PricePrediction {
-  productId: string;
-  currentPrice: number;
-  expectedPriceRange: {
-    low: number;
-    high: number;
-  };
-  dropProbability: number;
-  suggestedWaitDays: number;
-  confidenceScore: number;
-  modelUsed: PredictionModel;
-  factors: PredictionFactor[];
-  generatedAt: Date;
-}
-
-export enum PredictionModel {
-  ARIMA = 'arima',
-  PROPHET = 'prophet',
-  LSTM = 'lstm',
-  ENSEMBLE = 'ensemble',
-}
-
-export interface PredictionFactor {
-  name: string;
-  impact: 'positive' | 'negative' | 'neutral';
-  weight: number;
-  description: string;
 }
 
 // ─── Recommendation Types ─────────────────────────────────────────
@@ -188,13 +135,6 @@ export interface PriceAlert {
   isActive: boolean;
   createdAt: Date;
   triggeredAt?: Date;
-}
-
-export enum AlertType {
-  TARGET_PRICE = 'target_price',
-  SUDDEN_DROP = 'sudden_drop',
-  PREDICTION_TRIGGER = 'prediction_trigger',
-  EVENT_BASED = 'event_based',
 }
 
 export interface AlertNotification {

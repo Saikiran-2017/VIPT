@@ -7,13 +7,17 @@ import {
   PriceHistoryEntry,
   PriceHistoryStats,
   Platform,
-  VolatilityCategory,
+  ProductVolatility,
+  PricePoint,
+  FeatureVector,
 } from '@shared/types';
 import { API_CONFIG, PREDICTION_CONFIG, HISTORY_CONFIG } from '@shared/constants';
 import { v4 as uuidv4 } from 'uuid';
 import { antiManipulationService } from './antiManipulationService';
 import { recommendationService } from './recommendationService';
 import { alertService } from './alertService';
+import { dataValidator } from './DataValidator';
+import { loadValidatedFeatureContext } from './priceHistoryForPrediction';
 
 /**
  * Price Aggregation Service
@@ -76,6 +80,58 @@ export class PriceAggregationService {
   /**
    * Record a new price observation
    */
+  /**
+   * Append a `price_history` row after validation (used by workers/seed; no platform_listings upsert).
+   */
+  async appendPriceHistoryRecord(
+    productId: string,
+    platform: Platform,
+    price: number,
+    currency: string,
+    inStock: boolean,
+    recordedAt: Date,
+    discount?: number | null,
+    confidence?: number
+  ): Promise<boolean> {
+    const pricePoint: PricePoint = {
+      id: uuidv4(),
+      productId,
+      platform,
+      price,
+      currency,
+      inStock,
+      recordedAt,
+      confidence,
+    };
+    const validation = await dataValidator.validate(pricePoint, productId);
+    if (validation.quality === 'rejected') {
+      logger.warn(
+        `Price history rejected (${productId} / ${platform}): ${validation.reasons.join('; ')}`
+      );
+      return false;
+    }
+    const qualityDb = validation.quality === 'validated' ? 'validated' : 'suspicious';
+    await query(
+      `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at, quality)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        uuidv4(),
+        productId,
+        platform,
+        price,
+        currency,
+        discount ?? null,
+        inStock,
+        recordedAt.toISOString(),
+        qualityDb,
+      ]
+    );
+    logger.debug(
+      `Price history stored (${qualityDb}) normalizedUSD=${validation.normalizedPriceUSD.toFixed(2)}`
+    );
+    return true;
+  }
+
   async recordPrice(
     productId: string,
     platform: Platform,
@@ -86,7 +142,8 @@ export class PriceAggregationService {
     url: string = '',
     platformProductId: string = '',
     deliveryEstimate?: string,
-    currency: string = 'USD'
+    currency: string = 'USD',
+    confidence?: number
   ): Promise<void> {
     const totalEffectivePrice = price + shippingCost;
 
@@ -126,10 +183,31 @@ export class PriceAggregationService {
     const timePassed = lastEntry ? (Date.now() - new Date(lastEntry.recorded_at).getTime()) > HISTORY_CONFIG.RECORD_COOLDOWN_MS : true;
 
     if (priceChanged || timePassed) {
+      const pricePoint: PricePoint = {
+        id: uuidv4(),
+        productId,
+        platform,
+        price,
+        currency,
+        inStock,
+        recordedAt: new Date(),
+        confidence,
+      };
+      const validation = await dataValidator.validate(pricePoint, productId);
+      if (validation.quality === 'rejected') {
+        logger.warn(
+          `Price record rejected (${productId} / ${platform}): ${validation.reasons.join('; ')}`
+        );
+        return;
+      }
+      const qualityDb = validation.quality === 'validated' ? 'validated' : 'suspicious';
       await query(
-        `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-        [uuidv4(), productId, platform, price, currency, discount ?? null, inStock]
+        `INSERT INTO price_history (id, product_id, platform, price, currency, discount, in_stock, recorded_at, quality)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)`,
+        [uuidv4(), productId, platform, price, currency, discount ?? null, inStock, qualityDb]
+      );
+      logger.debug(
+        `Price history recorded (${qualityDb}) normalizedUSD=${validation.normalizedPriceUSD.toFixed(2)}`
       );
     }
 
@@ -188,7 +266,7 @@ export class PriceAggregationService {
         allTimeLow: 0,
         allTimeHigh: 0,
         averagePrice: 0,
-        volatilityIndex: VolatilityCategory.STABLE,
+        volatilityIndex: ProductVolatility.STABLE,
         standardDeviation: 0,
         changeFrequency: 0,
         priceHistory: history,
@@ -229,13 +307,13 @@ export class PriceAggregationService {
     const changeFrequency = effectivePrices.length > 1 ? changes / (effectivePrices.length - 1) : 0;
 
     // Volatility category
-    let volatilityIndex: VolatilityCategory;
+    let volatilityIndex: ProductVolatility;
     if (cv < PREDICTION_CONFIG.VOLATILITY_THRESHOLDS.STABLE) {
-      volatilityIndex = VolatilityCategory.STABLE;
+        volatilityIndex = ProductVolatility.STABLE;
     } else if (cv < PREDICTION_CONFIG.VOLATILITY_THRESHOLDS.MODERATE) {
-      volatilityIndex = VolatilityCategory.MODERATE;
+        volatilityIndex = ProductVolatility.MODERATE;
     } else {
-      volatilityIndex = VolatilityCategory.HIGHLY_VOLATILE;
+        volatilityIndex = ProductVolatility.HIGHLY_VOLATILE;
     }
 
     return {
@@ -296,6 +374,15 @@ export class PriceAggregationService {
       inStock: false,
       lastUpdated: new Date(),
     };
+  }
+
+  /**
+   * Phase 1: build ML-ready features from stored history (read-only; no prediction model).
+   * Excludes rejected `price_history` rows; requires at least 2 points.
+   */
+  async buildFeatureVectorFromHistory(productId: string): Promise<FeatureVector | null> {
+    const ctx = await loadValidatedFeatureContext(productId);
+    return ctx?.featureVector ?? null;
   }
 }
 
