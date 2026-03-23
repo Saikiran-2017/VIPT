@@ -120,8 +120,14 @@ async function startServer(): Promise<void> {
     }
 
     if (dbConnected) {
-      await runMigrations();
-      logger.info('Database migrations completed');
+      const skipMigrate =
+        process.env.SKIP_DB_MIGRATE === '1' || process.env.SKIP_DB_MIGRATE === 'true';
+      if (skipMigrate) {
+        logger.warn('Skipping database migrations (SKIP_DB_MIGRATE is set)');
+      } else {
+        await runMigrations();
+        logger.info('Database migrations completed');
+      }
     }
 
     let redisReady = false;

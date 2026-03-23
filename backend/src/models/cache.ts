@@ -5,13 +5,18 @@ import { logger } from '../utils/logger';
 let redisClient: RedisClientType;
 
 export async function initRedis(): Promise<RedisClientType> {
-  redisClient = createClient({
-    socket: {
-      host: config.redis.host,
-      port: config.redis.port,
-    },
-    password: config.redis.password,
-  });
+  const redisUrl = process.env.REDIS_URL?.trim();
+  if (redisUrl) {
+    redisClient = createClient({ url: redisUrl });
+  } else {
+    redisClient = createClient({
+      socket: {
+        host: config.redis.host,
+        port: config.redis.port,
+      },
+      password: config.redis.password,
+    });
+  }
 
   redisClient.on('error', (err: Error) => {
     logger.error('Redis error:', err);
