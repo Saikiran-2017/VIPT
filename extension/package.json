@@ -2,6 +2,7 @@
   "name": "@vayu/extension",
   "version": "1.0.0",
   "description": "Vayu AI Price Tracker - Chrome Extension",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite build --watch",

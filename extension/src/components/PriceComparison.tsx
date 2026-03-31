@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import styles from './PriceComparison.module.css';
 
 interface Props {
   productId: string;
@@ -199,7 +200,7 @@ export default function PriceComparison({ productId }: Props) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                <div className={`${styles['platform-indicator']} ${styles[`platform-${listing.platform.toLowerCase()}` as keyof typeof styles]}`} />
                 <span className="text-xs font-medium capitalize">{listing.platform}</span>
                 {isLowest && (
                   <span className="text-[9px] bg-green-900/40 text-green-400 px-1.5 py-0.5 rounded-full font-medium">
