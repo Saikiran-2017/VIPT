@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { config } from '../config';
+import { logger } from '../utils/logger';
 
 const PORT = config.server.port;
 const API_BASE = `http://localhost:${PORT}/api/v1`;
@@ -14,21 +15,21 @@ const api = axios.create({
 });
 
 async function runE2E() {
-  console.log('🚀 Starting E2E Verification...');
+  logger.info('🚀 Starting E2E Verification...');
   if (!config.auth.skipAuth && !API_KEY) {
-    console.warn(
+    logger.warn(
       'WARNING: backend/.env should set API_KEY (same as server) or run server with SKIP_AUTH=1 for keyless local runs.'
     );
   }
 
   try {
     // 1. Check Health
-    console.log('\n1. Checking Health...');
+    logger.info('\n1. Checking Health...');
     const health = await axios.get(`http://localhost:${PORT}/health`);
-    console.log('✅ Health status:', health.data.data.status);
+    logger.info('✅ Health status:', health.data.data.status);
 
     // 2. Detect Product
-    console.log('\n2. Simulating Product Detection (Amazon)...');
+    logger.info('\n2. Simulating Product Detection (Amazon)...');
     const detectionPayload = {
       name: 'Sony WH-1000XM5 Wireless Noise Cancelling Headphones',
       brand: 'Sony',
@@ -40,11 +41,11 @@ async function runE2E() {
     };
     const detectRes = await axios.post(`${API_BASE}/products/detect`, detectionPayload);
     const product = detectRes.data.data.product;
-    console.log('✅ Product resolved:', product.universalProductId);
-    console.log('✅ Product ID:', product.id);
+    logger.info('✅ Product resolved:', product.universalProductId);
+    logger.info('✅ Product ID:', product.id);
 
     // 3. Record price on another platform
-    console.log('\n3. Recording price from another platform (Walmart)...');
+    logger.info('\n3. Recording price from another platform (Walmart)...');
     await api.post('/prices/record', {
       productId: product.id,
       platform: 'walmart',
@@ -53,28 +54,28 @@ async function runE2E() {
       inStock: true,
       url: 'https://www.walmart.com/ip/sony-headphones'
     });
-    console.log('✅ Walmart price recorded');
+    logger.info('✅ Walmart price recorded');
 
     // 4. Get Comparison
-    console.log('\n4. Fetching Price Comparison...');
+    logger.info('\n4. Fetching Price Comparison...');
     const comparisonRes = await api.get(`/prices/compare/${product.id}`);
-    console.log('✅ Found', comparisonRes.data.data.listings.length, 'listings');
-    console.log('✅ Lowest price:', comparisonRes.data.data.lowestPrice.totalEffectivePrice);
+    logger.info('✅ Found', comparisonRes.data.data.listings.length, 'listings');
+    logger.info('✅ Lowest price:', comparisonRes.data.data.lowestPrice.totalEffectivePrice);
 
     // 5. Get Prediction
-    console.log('\n5. Fetching Price Prediction...');
+    logger.info('\n5. Fetching Price Prediction...');
     const predictionRes = await api.get(`/predictions/${product.id}`);
-    console.log('✅ Prediction confidence:', predictionRes.data.data.confidenceScore);
-    console.log('✅ Drop probability:', predictionRes.data.data.dropProbability);
+    logger.info('✅ Prediction confidence:', predictionRes.data.data.confidenceScore);
+    logger.info('✅ Drop probability:', predictionRes.data.data.dropProbability);
 
     // 6. Get Recommendation
-    console.log('\n6. Fetching Recommendation...');
+    logger.info('\n6. Fetching Recommendation...');
     const recommendationRes = await api.get(`/recommendation/${product.id}`);
-    console.log('✅ Action:', recommendationRes.data.data.action);
-    console.log('✅ Reasoning:', recommendationRes.data.data.reasoning[0]);
+    logger.info('✅ Action:', recommendationRes.data.data.action);
+    logger.info('✅ Reasoning:', recommendationRes.data.data.reasoning[0]);
 
     // 7. Create Alert
-    console.log('\n7. Creating Price Alert...');
+    logger.info('\n7. Creating Price Alert...');
     const e2eUserId = '00000000-0000-0000-0000-000000000001';
     const alertRes = await api.post(
       '/alerts',
@@ -85,16 +86,16 @@ async function runE2E() {
       },
       { headers: { 'X-User-Id': e2eUserId } }
     );
-    console.log('✅ Alert created ID:', alertRes.data.data.id);
+    logger.info('✅ Alert created ID:', alertRes.data.data.id);
 
-    console.log('\n✨ E2E Verification Completed Successfully!');
+    logger.info('\n✨ E2E Verification Completed Successfully!');
   } catch (error: any) {
-    console.error('\n❌ E2E Verification Failed!');
+    logger.error('\n❌ E2E Verification Failed!');
     if (error.response) {
-      console.error('Status:', error.response.status);
-      console.error('Data:', JSON.stringify(error.response.data, null, 2));
+      logger.error('Status:', error.response.status);
+      logger.error('Data:', JSON.stringify(error.response.data, null, 2));
     } else {
-      console.error('Error:', error.message);
+      logger.error('Error:', error.message);
     }
     process.exit(1);
   }

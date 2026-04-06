@@ -59,40 +59,45 @@ router.post(
 
         // Background: cross-platform refresh (BullMQ when Redis is up; else inline). Validator-first via `recordPrice`.
         const scrapingCacheKey = `scraping:triggered:${product.id}`;
-        import('../models/cache').then(async ({ cacheGet, cacheSet }) => {
-          const recentlyTriggered = await cacheGet(scrapingCacheKey);
-          if (recentlyTriggered) return;
-
-          await cacheSet(scrapingCacheKey, true, 3600);
-
+        (async () => {
           try {
-            await enqueueCrossPlatformRefreshJob({
-              productId: product.id,
-              productName: product.name,
-              sourcePlatform: detection.platform,
-              currentPrice: detection.currentPrice,
-              brand: product.brand,
-              modelNumber: product.modelNumber,
-            });
-          } catch (queueErr) {
-            logger.warn(
-              `Queue enqueue failed for product ${product.id}, running cross-platform ingest inline`,
-              queueErr
-            );
-            fetchCrossPlatformAndRecordScrapedPrices(
-              product.id,
-              product.name,
-              detection.platform,
-              detection.currentPrice,
-              product.brand,
-              product.modelNumber
-            ).catch((err) => {
-              logger.error(`Inline cross-platform ingest failed for product ${product.id}:`, err);
-            });
+            const { cacheGet, cacheSet } = await import('../models/cache');
+            const recentlyTriggered = await cacheGet(scrapingCacheKey);
+            if (recentlyTriggered) return;
+
+            await cacheSet(scrapingCacheKey, true, 3600);
+
+            try {
+              await enqueueCrossPlatformRefreshJob({
+                productId: product.id,
+                productName: product.name,
+                sourcePlatform: detection.platform,
+                currentPrice: detection.currentPrice,
+                brand: product.brand,
+                modelNumber: product.modelNumber,
+              });
+            } catch (queueErr) {
+              logger.warn(
+                `Queue enqueue failed for product ${product.id}, running cross-platform ingest inline`,
+                queueErr
+              );
+              try {
+                await fetchCrossPlatformAndRecordScrapedPrices(
+                  product.id,
+                  product.name,
+                  detection.platform,
+                  detection.currentPrice,
+                  product.brand,
+                  product.modelNumber
+                );
+              } catch (err) {
+                logger.error(`Inline cross-platform ingest failed for product ${product.id}:`, err);
+              }
+            }
+          } catch (err) {
+            logger.error(`Background scraping cache check failed for product ${product.id}:`, err);
           }
-        }).catch((err) => {
-          logger.error(`Background scraping cache check failed for product ${product.id}:`, err);
-        });
+        })();
       }
 
       res.json({

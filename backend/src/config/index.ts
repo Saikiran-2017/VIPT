@@ -18,7 +18,7 @@ export const config = {
     port: parseInt(process.env.DB_PORT || '5433', 10),
     name: process.env.DB_NAME || 'vipt_price_tracker',
     user: process.env.DB_USER || 'vipt_admin',
-    password: process.env.DB_PASSWORD || 'vipt_secure_password_2026',
+    password: process.env.DB_PASSWORD || '',
   },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
